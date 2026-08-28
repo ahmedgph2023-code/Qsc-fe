@@ -1,0 +1,543 @@
+﻿{
+  "keyCounts": {
+    "en": 1045,
+    "ar": 1045
+  },
+  "missingInAr": [],
+  "extraInAr": [],
+  "usedKeys": 844,
+  "unusedKeysCount": 201,
+  "unusedSample": [
+    "common.clear",
+    "common.refresh",
+    "common.submit",
+    "common.continue",
+    "common.overwrite",
+    "common.skip",
+    "common.search",
+    "common.optional",
+    "common.selectDate",
+    "common.selectRange",
+    "common.firstPage",
+    "common.previousPage",
+    "common.nextPage",
+    "common.lastPage",
+    "common.confirmDeletion",
+    "common.allowPopups",
+    "common.auditReasonPlaceholder",
+    "common.eyebrow",
+    "common.language",
+    "common.english",
+    "common.arabic",
+    "common.pass",
+    "common.fail",
+    "common.warn",
+    "common.clientTransfer",
+    "common.individual",
+    "common.male",
+    "common.female",
+    "common.fullyShariah",
+    "common.unrestricted",
+    "common.medium",
+    "common.close",
+    "common.view",
+    "common.overview",
+    "common.performance",
+    "common.points",
+    "common.reference",
+    "common.proposed",
+    "common.reason",
+    "common.message"
+  ],
+  "tKeysMissingFromEn": [],
+  "filesWithT": 30,
+  "filesWithoutT": [
+    "src/components/auth/ActionGate.tsx",
+    "src/components/auth/RoleGate.tsx",
+    "src/components/brand/BrandLogo.tsx",
+    "src/components/IndexConstituentsDialog.tsx",
+    "src/components/IndexDataPointDialog.tsx",
+    "src/components/layout/shellChrome.ts",
+    "src/components/phase1/AnimatedNumber.tsx",
+    "src/components/phase1/CdpTabs.tsx",
+    "src/components/phase1/ChangeChip.tsx",
+    "src/components/phase1/DatePicker.tsx",
+    "src/components/phase1/DateRangePicker.tsx",
+    "src/components/phase1/FeeBandsCard.tsx",
+    "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+    "src/components/phase1/HoldingsCashOverview.tsx",
+    "src/components/phase1/MandateBadge.tsx",
+    "src/components/phase1/PageHeader.tsx",
+    "src/components/phase1/PerformanceAnalytics.tsx",
+    "src/components/phase1/PrintButton.tsx",
+    "src/components/phase1/ReasonDialog.tsx",
+    "src/components/phase1/SelectField.tsx",
+    "src/components/phase1/SeverityDot.tsx",
+    "src/components/phase1/StatsSummaryBar.tsx",
+    "src/components/phase1/StatusStepper.tsx",
+    "src/components/phase1/TimeRangeToggle.tsx",
+    "src/components/StockPricePointDialog.tsx",
+    "src/components/UploadConflictPreviewDialog.tsx",
+    "src/pages/CustomerDetail.tsx"
+  ],
+  "hardCodedByFile": [
+    [
+      "src/pages/CustomerDetail.tsx",
+      140
+    ],
+    [
+      "src/pages/Phase3Research.tsx",
+      53
+    ],
+    [
+      "src/pages/Customers.tsx",
+      46
+    ],
+    [
+      "src/pages/Phase4Advanced.tsx",
+      36
+    ],
+    [
+      "src/pages/Phase2Ops.tsx",
+      30
+    ],
+    [
+      "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      27
+    ],
+    [
+      "src/components/phase1/FeeBandsCard.tsx",
+      22
+    ],
+    [
+      "src/components/phase1/PerformanceAnalytics.tsx",
+      6
+    ],
+    [
+      "src/components/phase1/HoldingsCashOverview.tsx",
+      4
+    ],
+    [
+      "src/pages/Login.tsx",
+      3
+    ],
+    [
+      "src/pages/Stocks.tsx",
+      3
+    ],
+    [
+      "src/components/phase1/ReasonDialog.tsx",
+      2
+    ],
+    [
+      "src/components/layout/Shell.tsx",
+      1
+    ],
+    [
+      "src/components/phase1/PrintButton.tsx",
+      1
+    ]
+  ],
+  "hardCodedSample": [
+    {
+      "file": "src/components/layout/Shell.tsx",
+      "kind": "title",
+      "text": "Asia/Qatar"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Fee bands"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Fee bands"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "From"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Rebate %"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Mgmt %/yr"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Perf %"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Frequency"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Bands cannot overlap. Leave To empty for an open-ended term."
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Effective from / to (optional)"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Rebate commission %"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Annual management %"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Performance %"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Performance frequency"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "High-water mark / capital (QAR)"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "jsx",
+      "text": "Cancel"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "title",
+      "text": "No fee bands yet"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "placeholder",
+      "text": "From ΓåÆ to"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "placeholder",
+      "text": "e.g. 0.105"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "placeholder",
+      "text": "e.g. 1.50"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "placeholder",
+      "text": "e.g. 10"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "placeholder",
+      "text": "Notes (optional)"
+    },
+    {
+      "file": "src/components/phase1/FeeBandsCard.tsx",
+      "kind": "title",
+      "text": "Delete fee band"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Sectoral breakdown"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Weight of NAV by sector"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "No sector weights on this date."
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Holdings analytics"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Open lots ┬╖ heatmaps ┬╖ weight bars ┬╖ Excel ann./contrib."
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Ticker"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Sector"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Shares"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Cost"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Price"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Equity"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Total cost"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Weight %"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Days"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Contrib."
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Ann."
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Sectoral"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "CASH"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Total"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Return"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Vs cost % by ticker (filtered)"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "No return series."
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Asset allocation"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Weight of NAV by ticker"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "No allocation weights."
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "jsx",
+      "text": "Filter table &amp; charts"
+    },
+    {
+      "file": "src/components/phase1/HistoricalPortfolioDashboard.tsx",
+      "kind": "aria-label",
+      "text": "Investment portfolio Excel view"
+    },
+    {
+      "file": "src/components/phase1/HoldingsCashOverview.tsx",
+      "kind": "jsx",
+      "text": "Key portfolio and account summary"
+    },
+    {
+      "file": "src/components/phase1/HoldingsCashOverview.tsx",
+      "kind": "jsx",
+      "text": "Cost, daily change & Excel workbook"
+    },
+    {
+      "file": "src/components/phase1/HoldingsCashOverview.tsx",
+      "kind": "jsx",
+      "text": "Detailed metrics and workbook-shaped fields only"
+    },
+    {
+      "file": "src/components/phase1/HoldingsCashOverview.tsx",
+      "kind": "aria-label",
+      "text": "Holdings and cash overview"
+    },
+    {
+      "file": "src/components/phase1/PerformanceAnalytics.tsx",
+      "kind": "jsx",
+      "text": "Performance analytics"
+    },
+    {
+      "file": "src/components/phase1/PerformanceAnalytics.tsx",
+      "kind": "jsx",
+      "text": "Portfolio vs benchmark index (base 100)"
+    },
+    {
+      "file": "src/components/phase1/PerformanceAnalytics.tsx",
+      "kind": "jsx",
+      "text": "Simple return vs QERI"
+    },
+    {
+      "file": "src/components/phase1/PerformanceAnalytics.tsx",
+      "kind": "jsx",
+      "text": "Portfolio cumulative simple return % vs QERI monthly return % ΓÇö month-end closing"
+    },
+    {
+      "file": "src/components/phase1/PerformanceAnalytics.tsx",
+      "kind": "title",
+      "text": "No performance series"
+    },
+    {
+      "file": "src/components/phase1/PerformanceAnalytics.tsx",
+      "kind": "aria-label",
+      "text": "About these charts"
+    },
+    {
+      "file": "src/components/phase1/PrintButton.tsx",
+      "kind": "toast",
+      "text": "Allow pop-ups to print this report."
+    },
+    {
+      "file": "src/components/phase1/ReasonDialog.tsx",
+      "kind": "jsx",
+      "text": "Cancel"
+    },
+    {
+      "file": "src/components/phase1/ReasonDialog.tsx",
+      "kind": "placeholder",
+      "text": "Enter a clear audit reasonΓÇª"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Client details"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Client Type"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Individual"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Company"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Title"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Email"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Mobile Number"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Join Date"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Gender"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Birthdate"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "City"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Country"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Nationality"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Cancel"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Mandate & control"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Approve"
+    },
+    {
+      "file": "src/pages/CustomerDetail.tsx",
+      "kind": "jsx",
+      "text": "Reject"
+    }
+  ]
+}

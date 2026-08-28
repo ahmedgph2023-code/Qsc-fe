@@ -1,0 +1,21 @@
+{
+    "name": "qatar-securities-co",
+    "version": "0.0.0",
+    "license": "MIT",
+    "scripts": {
+        "dev": "set PORT=5173&& set BASE_PATH=/&& npm run dev -w @workspace/portfolio-dashboard",
+        "build": "npm run typecheck && npm -ws --if-present run build",
+        "typecheck:libs": "tsc --build",
+        "typecheck": "npm run typecheck:libs && npm -ws --if-present run typecheck"
+    },
+    "private": true,
+    "workspaces": [
+        "artifacts/*",
+        "scripts"
+    ],
+    "devDependencies": {
+        "@rollup/rollup-win32-x64-msvc": "^4.61.0",
+        "prettier": "^3.8.3",
+        "typescript": "~5.9.3"
+    }
+}
