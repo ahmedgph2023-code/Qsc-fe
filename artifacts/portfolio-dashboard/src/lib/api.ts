@@ -24,23 +24,37 @@ export function getToken(): string | null {
 }
 
 async function fetchApi(path: string, options: RequestInit = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const hasBody = options.body != null && options.body !== "";
   const isFormData = options.body instanceof FormData;
   const headers: Record<string, string> = {
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(hasBody && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(options.headers as Record<string, string> || {}),
   };
   if (authToken) {
     headers["Authorization"] = `Bearer ${authToken}`;
   }
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...options, method, headers });
   if (res.status === 401) {
-    setToken(null);
-    window.location.href = "/login";
-    throw new Error("Unauthorized");
+    const err = await res.json().catch(() => ({ error: "Unauthorized" }));
+    const message = err.message || err.error || "Unauthorized";
+    // Only force reload when an existing session expired — not on failed login attempts.
+    if (authToken) {
+      setToken(null);
+      window.location.href = "/login";
+    }
+    throw new Error(message);
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(err.message || err.error || "Request failed");
+    const text = await res.text();
+    let parsed: { message?: string; error?: string } = {};
+    try {
+      parsed = text ? JSON.parse(text) : {};
+    } catch {
+      parsed = {};
+    }
+    const detail = parsed.message || parsed.error || (text ? text.replace(/<[^>]+>/g, " ").trim().slice(0, 180) : "");
+    throw new Error(detail || `Request failed (${res.status} ${method} ${path})`);
   }
   return res.json();
 }

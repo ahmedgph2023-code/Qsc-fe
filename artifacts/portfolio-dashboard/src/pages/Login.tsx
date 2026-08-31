@@ -211,7 +211,10 @@ export default function Login() {
       } catch { /* ignore */ }
       setLocation("/");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("login.invalidCredentials"));
+      const raw = err instanceof Error ? err.message : "";
+      const isBadCreds =
+        /invalid credentials|account disabled|unauthorized/i.test(raw);
+      setError(isBadCreds ? t("login.invalidCredentials") : raw || t("login.invalidCredentials"));
     } finally {
       setLoading(false);
     }
