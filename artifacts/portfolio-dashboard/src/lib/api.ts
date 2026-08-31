@@ -104,6 +104,11 @@ export function getStocks(): Promise<StockData[]> {
   return fetchApi("/stocks");
 }
 
+/** Top absolute day movers (batched server path — safe for dashboard). */
+export function getStockMovers(limit = 5): Promise<StockData[]> {
+  return fetchApi(`/stocks/movers?limit=${encodeURIComponent(String(limit))}`);
+}
+
 export interface CorporateAction {
   id: string;
   ticker: string;
@@ -1006,6 +1011,59 @@ export function getDashboardMetrics(): Promise<DashboardMetrics> {
 
 export function getAumTrajectory(): Promise<{ date: string; value: number }[]> {
   return fetchApi("/dashboard/aum-trajectory");
+}
+
+export type SqlFirmOverview = {
+  source: "sql";
+  configured: boolean;
+  asOf: string | null;
+  qscDates: Array<{ date: string; rows: number; lastUpdated?: string | null }>;
+  metrics: {
+    totalPortfolioValue: number;
+    totalSystemCash: number;
+    totalNavDisplay: number;
+    activeClients: number;
+    avgPortfolioSize: number;
+    clientsWithShares: number;
+    clientsCashOnly: number;
+    ledgerClients: number;
+    shareTxRows: number;
+    cashTxRows: number;
+    pvDelta: number | null;
+    pvDeltaPct: number | null;
+    cashDelta: number | null;
+  };
+  trajectory: Array<{ date: string; portfolioValue: number; systemCash: number; navDisplay: number }>;
+  topClients: Array<{
+    clientId: number;
+    name: string;
+    nameEn: string;
+    nameAr: string;
+    portfolioValue: number;
+    systemCash: number;
+  }>;
+  mix: { equity: number; cash: number };
+  indices: {
+    dsm: {
+      id: string;
+      name: string;
+      last: number;
+      changePct: number | null;
+      series: Array<{ date: string; value: number }>;
+    } | null;
+    qeri: {
+      id: string;
+      name: string;
+      last: number;
+      changePct: number | null;
+      series: Array<{ date: string; value: number }>;
+    } | null;
+  };
+};
+
+export function getSqlFirmOverview(asOf?: string): Promise<SqlFirmOverview> {
+  const q = asOf ? `?asOf=${encodeURIComponent(asOf)}` : "";
+  return fetchApi(`/dashboard/sql-overview${q}`);
 }
 
 export function getAumVsIndex(indexName?: string): Promise<{

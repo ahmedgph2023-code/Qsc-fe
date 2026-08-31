@@ -132,7 +132,9 @@ export function DisplaySettingsMenu({
   const [open, setOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const customRef = useRef<HTMLInputElement>(null);
+  const customMainRef = useRef<HTMLInputElement>(null);
   const customAccent = accent.startsWith("#");
+  const customPalette = palette.startsWith("#");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -219,11 +221,30 @@ export function DisplaySettingsMenu({
                     key={p.id}
                     id={p.id}
                     color={p.color}
-                    selected={palette === p.id}
+                    selected={!customPalette && palette === p.id}
                     onSelect={setPalette}
                     label={`${p.id} ${t("settings.mainColor")}`}
                   />
                 ))}
+                <button
+                  type="button"
+                  className={cn("prefs-swatch is-custom", customPalette && "is-on")}
+                  onClick={() => customMainRef.current?.click()}
+                  aria-label={t("settings.customMain")}
+                  style={customPalette ? { background: palette } : undefined}
+                >
+                  {customPalette ? <Check /> : "+"}
+                </button>
+                <input
+                  ref={customMainRef}
+                  type="color"
+                  className="sr-only"
+                  value={customPalette ? palette : "#2c62e8"}
+                  onChange={(e) => setPalette(e.target.value)}
+                  tabIndex={-1}
+                  aria-hidden
+                />
+                <span className="prefs-swatch-label">{t("settings.custom")}</span>
               </div>
               <p className="prefs-caption">{t("settings.mainApplies")}</p>
               <div className="prefs-preview-chart" data-palette={palette}>
@@ -256,8 +277,9 @@ export function DisplaySettingsMenu({
                   className={cn("prefs-swatch is-custom", customAccent && "is-on")}
                   onClick={() => customRef.current?.click()}
                   aria-label={t("settings.customAccent")}
+                  style={customAccent ? { background: accent } : undefined}
                 >
-                  +
+                  {customAccent ? <Check /> : "+"}
                 </button>
                 <input
                   ref={customRef}

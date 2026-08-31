@@ -72,6 +72,8 @@ function printChrome(stmt: ClientStatement, periodLine: string, body: string) {
   const lang = i18n.language === "ar" ? "ar" : "en";
   const dir = lang === "ar" ? "rtl" : "ltr";
   const title = lang === "ar" ? stmt.titleAr : stmt.titleEn;
+  const companyName = stmt.company?.legalName || "Qatar Co. for Securities";
+  const printedAt = stmt.print?.printedAtIso || new Date().toISOString();
   return `<!DOCTYPE html><html lang="${lang}" dir="${dir}"><head><meta charset="utf-8"/><title>${escapeHtml(title)}</title>
 <style>
   @page { size: A4; margin: 12mm 10mm 16mm; }
@@ -111,7 +113,7 @@ function printChrome(stmt: ClientStatement, periodLine: string, body: string) {
   <header class="sheet-head">
     <img src="${logoUrl()}" alt="QSC"/>
     <div class="titles">
-      <div class="co">${escapeHtml(stmt.company.legalName)}</div>
+      <div class="co">${escapeHtml(companyName)}</div>
       <h1>${escapeHtml(stmt.titleEn)}</h1>
       <p class="ar">${escapeHtml(stmt.titleAr)}</p>
     </div>
@@ -122,7 +124,7 @@ function printChrome(stmt: ClientStatement, periodLine: string, body: string) {
   <footer class="foot">
     <span>IPMS</span>
     <span>${escapeHtml(stmt.investor.displayName || stmt.investor.nameEn || stmt.investor.nameAr)}</span>
-    <span>Printed at ${fmtDateTime(stmt.print.printedAtIso)}</span>
+    <span>Printed at ${fmtDateTime(printedAt)}</span>
   </footer>
 <script>window.onload=function(){window.focus();window.print();}</script>
 </body></html>`;
@@ -219,34 +221,20 @@ function summaryBody(stmt: RealizedSummaryStatement) {
     <td class="num">${l.compId ?? ""}</td>
     <td>${escapeHtml(l.accountTypePrinted || "")}</td>
     <td class="num">${num(l.tradingProfit)}</td>
-    <td class="num">${money(l.distributedDividends)}</td>
-    <td class="num">${money(l.nonReceivedDividends)}</td>
-    <td class="num">${money(l.totalProfit)}</td>
   </tr>`);
   const recap = [
-    ["Commission", money(stmt.footer.commission)],
-    ["End of Period Balance", money(stmt.footer.endOfPeriodBalance)],
-    ["Dr/Cr Balance", money(stmt.footer.drCrBalance)],
-    ["Paid Capital", money(stmt.footer.paidCapital)],
-    ["Total", money(stmt.footer.footerTotal)],
     ["Realized Profit/Loss", money(stmt.footer.realizedProfitLoss)],
-    ["Expected Profit/Loss", money(stmt.footer.expectedProfitLoss)],
-    ["Net Profit/Loss", money(stmt.footer.netProfitLoss)],
-    ["Profit/Loss %", money(stmt.footer.profitLossPercentage)],
-    ["Received Profits", money(stmt.footer.receivedProfits)],
-    ["NonReceived Profits", money(stmt.footer.nonReceivedProfits)],
   ].map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join("");
   return `
     <table>
       <thead>
         <tr>
           <th>Company</th><th>Code</th><th>Type</th>
-          <th class="num">Trading Profit</th><th class="num">Distributed Div.</th>
-          <th class="num">Non-Received Div.</th><th class="num">Total Profit</th>
+          <th class="num">Trading Profit</th>
         </tr>
       </thead>
       <tbody>${rows.join("")}
-        <tr class="open"><td colspan="3">Total</td><td class="num">${num(stmt.tradingProfitTotal)}</td><td></td><td></td><td></td></tr>
+        <tr class="open"><td colspan="3">Total</td><td class="num">${num(stmt.tradingProfitTotal)}</td></tr>
       </tbody>
     </table>
     <table class="recap"><tbody>${recap}</tbody></table>`;
@@ -316,11 +304,27 @@ export function buildStatementPrintHtml(stmt: ClientStatement): string {
 }
 
 export function openStatementPrint(stmt: ClientStatement) {
-  const w = window.open("", "_blank", "noopener,noreferrer,width=980,height=720");
+  let html: string;
+  try {
+    html = buildStatementPrintHtml(stmt);
+  } catch (err) {
+    console.error(err);
+    window.alert(i18n.t("statements.printFailed"));
+    return;
+  }
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  // Do not pass noopener in features — Chromium then returns null and document.write throws.
+  const w = window.open(url, "_blank", "width=980,height=720");
   if (!w) {
+    URL.revokeObjectURL(url);
     window.alert(i18n.t("common.allowPopups"));
     return;
   }
-  w.document.write(buildStatementPrintHtml(stmt));
-  w.document.close();
+  try {
+    w.opener = null;
+  } catch {
+    /* ignore */
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

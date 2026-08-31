@@ -2,18 +2,18 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, FileSpreadsheet, FileText, Inbox, Printer } from "lucide-react";
+import { AlertTriangle, ArrowRight, FileDown, FileSpreadsheet, FileText, Inbox, Loader2 } from "lucide-react";
 import { Shell } from "@/components/layout/Shell";
-import { PageHeader, FilterBar, EmptyState } from "@/components/phase1/PageHeader";
+import { PageHeader, EmptyState } from "@/components/phase1/PageHeader";
 import { DatePicker } from "@/components/phase1/DatePicker";
 import { DateRangePicker } from "@/components/phase1/DateRangePicker";
 import { SelectField } from "@/components/phase1/SelectField";
-import { StatementPreview } from "@/components/statements/StatementPreview";
+import { StatementPreview, PortfolioStatementStats } from "@/components/statements/StatementPreview";
 import { openStatementPrint } from "@/components/statements/statementPrintHtml";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BlockedBoardTable } from "@/components/phase1/BlockedBoardTable";
+import { DataTableIconBtn, DataTableToolbar } from "@/components/phase1/DataTableCard";
 import {
   extClientDisplayName,
   getAccountStatement,
@@ -70,6 +70,16 @@ async function loadStatement(draft: ReturnType<typeof readDraftFromUrl>): Promis
   return getRealizedDetailsStatement(id, draft.from, draft.to);
 }
 
+function isDraftApplied(
+  draft: ReturnType<typeof readDraftFromUrl>,
+  applied: ReturnType<typeof readDraftFromUrl> | null,
+) {
+  if (!applied) return false;
+  if (draft.clientId !== applied.clientId || draft.kind !== applied.kind) return false;
+  if (draft.kind === "portfolio") return draft.asOf === applied.asOf;
+  return draft.from === applied.from && draft.to === applied.to;
+}
+
 export default function Statements() {
   const { t, i18n } = useTranslation();
   const [, setLocation] = useLocation();
@@ -79,37 +89,25 @@ export default function Statements() {
     return initial.clientId ? initial : null;
   });
   const [exporting, setExporting] = useState(false);
-  const [clientFilter, setClientFilter] = useState("");
 
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ["ext-clients", draft.asOf],
     queryFn: () => getExtClients(draft.asOf),
   });
 
-  const clientOptions = useMemo(() => {
-    const q = clientFilter.trim().toLowerCase();
-    const filtered = !q
-      ? clients
-      : clients.filter((row) => {
-          const name = extClientDisplayName(row, i18n.language).toLowerCase();
-          return (
-            name.includes(q) ||
-            String(row.clientId).includes(q) ||
-            (row.nin || "").toLowerCase().includes(q) ||
-            (row.accountNumber || "").toLowerCase().includes(q)
-          );
-        });
-    const selected = clients.find((row) => String(row.clientId) === draft.clientId);
-    const top = filtered.slice(0, 80);
-    if (selected && !top.some((row) => row.clientId === selected.clientId)) top.unshift(selected);
-    return top.map((row) => ({
-      value: String(row.clientId),
-      label: clientLabel(row, i18n.language),
-    }));
-  }, [clients, clientFilter, draft.clientId, i18n.language]);
+  const clientOptions = useMemo(
+    () =>
+      clients.map((row) => ({
+        value: String(row.clientId),
+        label: clientLabel(row, i18n.language),
+        search: clientSearchText(row, i18n.language),
+      })),
+    [clients, i18n.language],
+  );
 
   const rangeOk = !!draft.from && !!draft.to && draft.from <= draft.to;
   const canRun = !!draft.clientId && (draft.kind === "portfolio" ? !!draft.asOf : rangeOk);
+  const filtersDirty = !isDraftApplied(draft, applied);
 
   const { data: stmt, isFetching, isError, error } = useQuery({
     queryKey: ["client-statement", applied],
@@ -127,125 +125,161 @@ export default function Statements() {
     setLocation(statementQuery(draft));
   }
 
+  const selectedClient = clients.find((row) => String(row.clientId) === draft.clientId);
+  const toolbarCount = stmt
+    ? `${stmt.investor.displayName || stmt.investor.nameAr || stmt.investor.nameEn} · ${stmt.investor.nin}`
+    : selectedClient
+      ? clientLabel(selectedClient, i18n.language)
+      : t("statements.title");
+
+  const toolbar = (
+    <DataTableToolbar
+      className="flex-wrap"
+      icon="/user.png"
+      count={toolbarCount}
+      countLoading={clientsLoading}
+      actions={
+        <>
+          <SelectField
+            className="h-9 w-[240px] min-w-[240px] max-w-[240px] shrink-0"
+            contentClassName="clients-select-content min-w-[18rem]"
+            value={draft.clientId}
+            onValueChange={(clientId) => setDraft((d) => ({ ...d, clientId }))}
+            options={clientOptions}
+            placeholder={clientsLoading ? t("common.loading") : t("statements.pickClient")}
+            searchPlaceholder={t("statements.searchClient")}
+            emptyText={t("statements.noClientMatch")}
+            aria-label={t("common.client")}
+          />
+          <SelectField
+            className="h-9 w-[150px] min-w-[150px] max-w-[150px] shrink-0"
+            contentClassName="clients-select-content min-w-[18rem]"
+            value={draft.kind}
+            onValueChange={(kind) => setDraft((d) => ({ ...d, kind: parseKind(kind) }))}
+            options={KINDS.map((kind) => ({ value: kind, label: t(`statements.kinds.${kind}`) }))}
+            aria-label={t("statements.kind")}
+          />
+          {draft.kind === "portfolio" ? (
+            <DatePicker
+              className="min-w-44 w-auto"
+              prefix={t("statements.asOf")}
+              value={draft.asOf}
+              onChange={(iso) => setDraft((d) => ({ ...d, asOf: iso || todayQatarIso() }))}
+              max={todayQatarIso()}
+            />
+          ) : (
+            <DateRangePicker
+              className="min-w-56 w-auto"
+              from={draft.from}
+              to={draft.to}
+              onChange={({ from, to }) => setDraft((d) => ({ ...d, from, to }))}
+            />
+          )}
+          {filtersDirty ? (
+            <DataTableIconBtn
+              label={t("statements.applyFilters")}
+              icon={<ArrowRight className="size-5 rtl:rotate-180" />}
+              active
+              disabled={!canRun || isFetching}
+              onClick={apply}
+            />
+          ) : null}
+        </>
+      }
+    />
+  );
+
   return (
     <Shell>
-      <PageHeader
+      <PageHeader  className="!mt-4"
         title={t("statements.title")}
         description={t("statements.description")}
         actions={
-          stmt && applied ? (
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => openStatementPrint(stmt)}>
-                <Printer className="me-2 h-4 w-4" />
-                {t("common.print")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={exporting}
-                onClick={async () => {
-                  setExporting(true);
-                  try {
-                    await downloadStatementExcel(applied.clientId, applied.kind, applied);
-                  } finally {
-                    setExporting(false);
-                  }
-                }}
-              >
-                <FileSpreadsheet className="me-2 h-4 w-4" />
-                {t("statements.excel")}
-              </Button>
-            </div>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!stmt}
+              onClick={() => {
+                try {
+                  if (stmt) openStatementPrint(stmt);
+                } catch (err) {
+                  console.error(err);
+                  window.alert(t("statements.printFailed"));
+                }
+              }}
+            >
+              <FileDown />
+              {t("statements.pdf")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!applied || exporting}
+              onClick={async () => {
+                if (!applied) return;
+                setExporting(true);
+                try {
+                  await downloadStatementExcel(applied.clientId, applied.kind, applied);
+                } catch (err) {
+                  console.error(err);
+                  window.alert((err as Error | undefined)?.message || t("statements.exportFailed"));
+                } finally {
+                  setExporting(false);
+                }
+              }}
+            >
+              {exporting ? <Loader2 className="animate-spin" /> : <FileSpreadsheet />}
+              {t("statements.excel")}
+            </Button>
+          </div>
         }
       />
 
-      <FilterBar className="mb-6 items-end">
-        <div className="min-w-48 flex-1 space-y-1">
-          <Input
-            value={clientFilter}
-            onChange={(e) => setClientFilter(e.target.value)}
-            placeholder={t("statements.searchClient")}
-            aria-label={t("statements.searchClient")}
-          />
+      {stmt?.kind === "portfolio" ? (
+        <div className="mb-6">
+          <PortfolioStatementStats stmt={stmt} />
         </div>
-        <SelectField
-          className="min-w-64"
-          value={draft.clientId}
-          onValueChange={(clientId) => setDraft((d) => ({ ...d, clientId }))}
-          options={[{ value: "", label: t("statements.pickClient") }, ...clientOptions]}
-          placeholder={clientsLoading ? t("common.loading") : t("statements.pickClient")}
-          aria-label={t("common.client")}
-        />
-        <SelectField
-          className="min-w-52"
-          value={draft.kind}
-          onValueChange={(kind) => setDraft((d) => ({ ...d, kind: parseKind(kind) }))}
-          options={KINDS.map((kind) => ({ value: kind, label: t(`statements.kinds.${kind}`) }))}
-          aria-label={t("statements.kind")}
-        />
-        {draft.kind === "portfolio" ? (
-          <DatePicker
-            prefix={t("statements.asOf")}
-            value={draft.asOf}
-            onChange={(iso) => setDraft((d) => ({ ...d, asOf: iso || todayQatarIso() }))}
-            max={todayQatarIso()}
-          />
-        ) : (
-          <DateRangePicker
-            from={draft.from}
-            to={draft.to}
-            onChange={({ from, to }) => setDraft((d) => ({ ...d, from, to }))}
-          />
-        )}
-        <Button type="button" onClick={apply} disabled={!canRun || isFetching}>
-          {t("statements.generate")}
-        </Button>
-      </FilterBar>
-
-      {!rangeOk && draft.kind !== "portfolio" ? (
-        <p className="mb-4 text-sm text-loss">{t("statements.invalidRange")}</p>
       ) : null}
 
-      {!applied ? (
-        <EmptyState
-          icon={<FileText className="h-12 w-12" />}
-          title={t("statements.emptyTitle")}
-          description={t("statements.emptyDesc")}
-        />
-      ) : isFetching && !stmt ? (
-        <div className="space-y-3">
-          <Skeleton className="h-10 w-full rounded-xl" />
-          <Skeleton className="h-64 w-full rounded-xl" />
-        </div>
-      ) : isError ? (
-        <EmptyState
-          icon={<AlertTriangle className="h-12 w-12" />}
-          title={t("statements.errorTitle")}
-          description={(error as Error | undefined)?.message || t("statements.errorDesc")}
-        />
-      ) : stmt ? (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {stmt.investor.displayName || stmt.investor.nameAr || stmt.investor.nameEn}
-            {" · "}
-            NIN <bdi className="font-data" dir="ltr">{stmt.investor.nin}</bdi>
-            {" · "}
-            {t("statements.screenPreviewHint")}
-          </p>
+      <section className="clients-table-card overflow-hidden">
+        {toolbar}
+        {!rangeOk && draft.kind !== "portfolio" ? (
+          <p className="px-5 py-3 text-sm text-loss">{t("statements.invalidRange")}</p>
+        ) : null}
+        {!applied ? (
+          <EmptyState
+            className="py-16"
+            icon={<FileText className="h-12 w-12" />}
+            title={t("statements.emptyTitle")}
+            description={t("statements.emptyDesc")}
+          />
+        ) : isFetching && !stmt ? (
+          <div className="space-y-3 p-5">
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+        ) : isError ? (
+          <EmptyState
+            className="py-16"
+            icon={<AlertTriangle className="h-12 w-12" />}
+            title={t("statements.errorTitle")}
+            description={(error as Error | undefined)?.message || t("statements.errorDesc")}
+          />
+        ) : stmt ? (
           <StatementPreview stmt={stmt} />
-        </div>
-      ) : (
-        <EmptyState
-          icon={<Inbox className="h-12 w-12" />}
-          title={t("statements.noDataTitle")}
-          description={t("statements.noDataDesc")}
-        />
-      )}
+        ) : (
+          <EmptyState
+            className="py-16"
+            icon={<Inbox className="h-12 w-12" />}
+            title={t("statements.noDataTitle")}
+            description={t("statements.noDataDesc")}
+          />
+        )}
+      </section>
 
-      <p className="mt-8 text-sm text-muted-foreground">{t("statements.openQuestionsHint")}</p>
-      <BlockedBoardTable rows={openQs?.rows ?? []} askPrefix="statements.ask" />
+      {/* <p className="mt-8 text-sm text-muted-foreground">{t("statements.openQuestionsHint")}</p>
+      <BlockedBoardTable rows={openQs?.rows ?? []} askPrefix="statements.ask" /> */}
     </Shell>
   );
 }
@@ -253,4 +287,21 @@ export default function Statements() {
 function clientLabel(row: ExtClientListRow, locale: string) {
   const name = extClientDisplayName(row, locale) || row.accountNumber;
   return `${name} · ${row.clientId}`;
+}
+
+function clientSearchText(row: ExtClientListRow, locale: string) {
+  return [
+    extClientDisplayName(row, locale),
+    row.name,
+    row.nameEn,
+    row.nameAr,
+    row.clientId,
+    row.nin,
+    row.accountNumber,
+    row.mainObjCode,
+    row.id,
+  ]
+    .filter((part) => part != null && String(part).trim() !== "")
+    .join(" ")
+    .toLowerCase();
 }

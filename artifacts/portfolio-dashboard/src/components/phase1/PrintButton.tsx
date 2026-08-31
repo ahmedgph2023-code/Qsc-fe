@@ -5,18 +5,13 @@ import i18n from "@/i18n";
 
 /** Opens a print window with HTML body (P1-PRINT / report packs). */
 export function openPrintDocument(title: string, bodyHtml: string) {
-  const w = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
-  if (!w) {
-    window.alert(i18n.t("common.allowPopups"));
-    return;
-  }
   const lang = i18n.language === "ar" ? "ar" : "en";
   const dir = lang === "ar" ? "rtl" : "ltr";
   const font =
     lang === "ar"
       ? "'Cairo','Alexandria',Segoe UI,Arial,sans-serif"
       : "Segoe UI,Arial,sans-serif";
-  w.document.write(`<!DOCTYPE html><html lang="${lang}" dir="${dir}"><head><meta charset="utf-8"/><title>${escapeHtml(title)}</title>
+  const html = `<!DOCTYPE html><html lang="${lang}" dir="${dir}"><head><meta charset="utf-8"/><title>${escapeHtml(title)}</title>
 <style>
   body{font-family:${font};color:#111;margin:24px;font-size:12px;line-height:1.45}
   h1{font-size:18px;margin:0 0 4px} h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}
@@ -27,8 +22,21 @@ export function openPrintDocument(title: string, bodyHtml: string) {
 </style></head><body>
 ${bodyHtml}
 <script>window.onload=function(){window.focus();window.print();}</script>
-</body></html>`);
-  w.document.close();
+</body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, "_blank", "width=900,height=700");
+  if (!w) {
+    URL.revokeObjectURL(url);
+    window.alert(i18n.t("common.allowPopups"));
+    return;
+  }
+  try {
+    w.opener = null;
+  } catch {
+    /* ignore */
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 function escapeHtml(s: string) {

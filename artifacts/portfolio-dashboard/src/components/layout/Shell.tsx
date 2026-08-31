@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/AuthContext";
 import {
   LayoutDashboard, Users, LineChart, TrendingUp, LogOut, Menu,
-  Blocks, RefreshCw, ShieldCheck, TriangleAlert, ScrollText,
-  Search, FileSpreadsheet, FileText, Settings2, UserCog, Scale, Radio, ClipboardList, ListChecks,
+  Blocks, RefreshCw, ShieldCheck, TriangleAlert,
+  Search, FileText, UserCog, Scale, Radio, ClipboardList,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -17,6 +17,7 @@ import { useLocale } from "@/i18n/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DisplaySettingsMenu } from "@/components/layout/DisplaySettingsMenu";
+import { FullscreenToggle } from "@/components/layout/FullscreenToggle";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { NavItemHelp } from "@/components/layout/NavItemHelp";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -43,21 +44,17 @@ const NAV_GROUPS: Array<{
   { labelKey: "nav.groups.construction", items: [
     { href: "/builder", labelKey: "nav.items.builder", icon: Blocks },
     { href: "/rebalances", labelKey: "nav.items.rebalances", icon: RefreshCw },
-    { href: "/data-import", labelKey: "nav.items.sheetImport", icon: FileSpreadsheet, access: { superAdminOnly: true } },
   ]},
   { labelKey: "nav.groups.control", items: [
     { href: "/statements", labelKey: "nav.items.statements", icon: FileText },
     { href: "/balances", labelKey: "nav.items.balances", icon: Scale },
     { href: "/live", labelKey: "nav.items.live", icon: Radio },
     { href: "/workshop", labelKey: "nav.items.workshop", icon: ClipboardList },
-    { href: "/uat", labelKey: "nav.items.uat", icon: ListChecks },
     { href: "/compliance", labelKey: "nav.items.compliance", icon: ShieldCheck },
     { href: "/risk", labelKey: "nav.items.risk", icon: TriangleAlert },
-    { href: "/audit", labelKey: "nav.items.audit", icon: ScrollText },
   ]},
   { labelKey: "nav.groups.admin", items: [
     { href: "/users", labelKey: "nav.items.users", icon: UserCog, access: { roles: ["admin"] } },
-    { href: "/system-config", labelKey: "nav.items.systemConfig", icon: Settings2, access: { superAdminOnly: true } },
   ]},
 ];
 
@@ -143,6 +140,34 @@ function CollapseGlyph({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function SidebarCollapseButton({
+  collapsed,
+  onToggle,
+  className,
+  expandLabel,
+  collapseLabel,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+  className?: string;
+  expandLabel: string;
+  collapseLabel: string;
+}) {
+  const label = collapsed ? expandLabel : collapseLabel;
+  return (
+    <button
+      type="button"
+      className={cn("shell-collapse-btn grid size-8 place-items-center rounded-full", className)}
+      onClick={onToggle}
+      aria-label={label}
+      title={label}
+      aria-pressed={collapsed}
+    >
+      <CollapseGlyph collapsed={collapsed} />
+    </button>
+  );
+}
+
 function SidebarNavItem({
   href,
   labelKey,
@@ -168,6 +193,8 @@ function SidebarNavItem({
   const lockedTitle = locked ? `${label} — ${t("nav.lockedHint")}` : label;
   const linkClass = cn(
     "relative flex w-full min-w-0 flex-1 items-center no-underline transition-[background,color,box-shadow,border-color] duration-200",
+    !locked && "shell-nav-link",
+    !locked && isActive && "is-active",
     iconOnly
       ? "h-[43px] justify-center gap-0 rounded-[11px] px-0"
       : "my-0.5 h-10 gap-3.5 rounded-[11px] px-[11px]",
@@ -175,20 +202,18 @@ function SidebarNavItem({
     locked
       ? "cursor-not-allowed font-medium text-[#142b55] opacity-40 dark:text-(--shell-nav-ink)"
       : isActive
-        ? cn(
-            "font-bold text-[#2160f4]",
-            "border border-[#bdcfff] bg-[linear-gradient(105deg,#edf4ff,#f0edff)]",
-            "shadow-[0_7px_20px_rgba(56,95,214,0.13)]",
-            "dark:border-[color-mix(in_srgb,var(--shell-blue)_28%,transparent)] dark:bg-(image:--shell-nav-active) dark:text-(--shell-blue)",
-          )
-        : "font-medium text-[#142b55] hover:bg-[#f0f4fb] dark:text-(--shell-nav-ink) dark:hover:bg-(--shell-nav-hover)",
+        ? "font-bold text-(--shell-blue)"
+        : "font-medium text-[#142b55] dark:text-(--shell-nav-ink)",
   );
   const inner = (
     <>
       {isActive && !locked ? (
         <span
           aria-hidden
-          className="absolute start-[-1px] top-1.5 bottom-1.5 w-[3px] rounded-[4px] bg-[linear-gradient(#2d6cff,#7046ef)]"
+          className={cn(
+            "absolute start-0 top-1.5 bottom-1.5 w-[3px] rounded-[4px] bg-(--shell-blue)",
+            !iconOnly && "start-[-1px]",
+          )}
         />
       ) : null}
       <span
@@ -197,13 +222,13 @@ function SidebarNavItem({
           iconOnly ? "size-[22px]" : "size-5",
           locked || !isActive
             ? "text-[#60779f] dark:text-(--shell-nav-muted)"
-            : "text-[#2568ff] dark:text-(--shell-blue)",
+            : "text-(--shell-blue)",
         )}
         aria-hidden
       >
         <Icon className="size-[17px]" strokeWidth={1.55} />
         {badge != null && badge > 0 && iconOnly && !locked ? (
-          <span className="absolute -end-1 -top-1 grid h-3 min-w-3 place-items-center rounded-full bg-[#2160f4] px-0.5 text-[8px] font-extrabold leading-3 text-white">
+          <span className="absolute -end-1 -top-1 grid h-3 min-w-3 place-items-center rounded-full bg-(--shell-blue) px-0.5 text-[8px] font-extrabold leading-3 text-white">
             {badge}
           </span>
         ) : null}
@@ -218,7 +243,7 @@ function SidebarNavItem({
         {label}
       </span>
       {badge != null && badge > 0 && !iconOnly && !locked ? (
-        <span className="ms-auto shrink-0 rounded-md bg-[#2160f4] px-1.5 py-0.5 text-[10px] font-extrabold text-white">
+        <span className="ms-auto shrink-0 rounded-md bg-(--shell-blue) px-1.5 py-0.5 text-[10px] font-extrabold text-white">
           {badge}
         </span>
       ) : null}
@@ -292,6 +317,7 @@ function SidebarContent({
   showCollapse = false,
   collapsed = false,
   onCollapse,
+  embedded = false,
 }: {
   location: string;
   username?: string | null;
@@ -303,38 +329,42 @@ function SidebarContent({
   showCollapse?: boolean;
   collapsed?: boolean;
   onCollapse?: () => void;
+  /** Flush into shell frame (no floating card chrome). */
+  embedded?: boolean;
 }) {
   const groups = navGroupsFor(username, role);
   const { t } = useTranslation();
 
   return (
-    <div
-      className={cn(
-        "relative flex h-full flex-col overflow-hidden rounded-[20px] border border-[#dfe6f2] bg-[#f8faff]",
-        "shadow-[0_14px_35px_rgba(28,55,100,0.09)]",
-        "dark:border-(--shell-border) dark:bg-(image:--shell-chrome) dark:shadow-(--shell-chrome-elev)",
-      )}
-    >
-      {showCollapse && onCollapse ? (
-        <button
-          type="button"
-          className={cn(
-            "absolute top-[5px] end-[5px] z-30 grid place-items-center rounded-full",
-            "border-[#d5e0f6] bg-white text-[#526b98]",
-            "shadow-[0_6px_18px_rgba(38,73,130,0.14)]",
-            "transition-[color,border-color] duration-200",
-            "hover:border-[#b9c9ee] hover:text-[#286cff]",
-            "dark:border-(--shell-border) dark:bg-(image:--shell-surface) dark:text-(--shell-muted)",
-            iconOnly ? "size-8 border-2" : "size-10 border-[3px]",
-          )}
-          onClick={onCollapse}
-          aria-label={collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-          title={collapsed ? t("nav.expandSidebar") : t("nav.collapseSidebar")}
-        >
-          <CollapseGlyph collapsed={collapsed} />
-        </button>
+    <div className="relative h-full overflow-visible">
+      {showCollapse && onCollapse && !embedded ? (
+        <SidebarCollapseButton
+          collapsed={collapsed}
+          onToggle={onCollapse}
+          expandLabel={t("nav.expandSidebar")}
+          collapseLabel={t("nav.collapseSidebar")}
+          className={
+            iconOnly
+              ? "absolute end-0 top-[29px] z-40 -translate-y-1/2 ltr:translate-x-1/2 rtl:-translate-x-1/2"
+              : "absolute end-[5px] top-[5px] z-40 size-10 border-[3px]"
+          }
+        />
       ) : null}
 
+      <div
+        className={cn(
+          "relative z-20 flex h-full flex-col overflow-hidden",
+          embedded
+            ? "rounded-none border-0 bg-transparent shadow-none dark:bg-transparent"
+            : [
+                "rounded-[20px] border border-[#dfe6f2] bg-[#f8faff]",
+                "shadow-[0_14px_35px_rgba(28,55,100,0.09)]",
+                "dark:border-(--shell-border) dark:bg-(image:--shell-chrome) dark:shadow-(--shell-chrome-elev)",
+              ],
+        )}
+      >
+
+      {!embedded ? (
       <div
         className={cn(
           "relative z-20 flex shrink-0 items-center border-b border-[#e0e7f2] dark:border-(--shell-line)",
@@ -354,11 +384,12 @@ function SidebarContent({
           )}
         </Link>
       </div>
+      ) : null}
 
       <nav
         className={cn(
           "app-sidebar-nav min-h-0 flex-1 overflow-x-hidden overflow-y-auto py-0.5 pb-1.5 pt-1.5",
-          iconOnly ? "ps-2" : "ps-2.5",
+          iconOnly ? "px-1.5" : "ps-2.5 pe-1.5",
         )}
         aria-label={t("nav.primary")}
       >
@@ -366,15 +397,20 @@ function SidebarContent({
           <div
             key={group.labelKey}
             className={cn(
-              "pe-1",
-              index > 0 && "mt-[7px] border-t border-[#dce5f2] pt-[7px] dark:border-(--shell-line)",
+              !iconOnly && "pe-1",
+              index > 0 && !iconOnly && "mt-[7px] border-t border-[#dce5f2] pt-[7px] dark:border-(--shell-line)",
             )}
           >
             <p
               className={cn(
                 "flex items-center font-bold text-[#61779d] dark:text-(--shell-nav-group)",
                 iconOnly
-                  ? "h-[13px] justify-center p-0 text-[0px] after:block after:h-px after:w-7 after:bg-[#d8e2f0] after:content-[''] dark:after:bg-(--shell-line)"
+                  ? cn(
+                      "justify-center p-0 text-[0px]",
+                      index > 0
+                        ? "h-[13px] after:block after:h-px after:w-7 after:bg-[#d8e2f0] after:content-[''] dark:after:bg-(--shell-line)"
+                        : "h-0 overflow-hidden",
+                    )
                   : "h-[27px] px-[9px] text-[12px]",
               )}
               aria-hidden={iconOnly}
@@ -415,6 +451,7 @@ function SidebarContent({
           iconOnly={iconOnly}
         />
       ) : null}
+      </div>
     </div>
   );
 }
@@ -727,13 +764,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className="shell-app flex min-h-screen flex-col text-(--shell-ink) md:items-stretch md:gap-0 md:p-0"
+      className="shell-app flex min-h-screen flex-col text-(--shell-ink) md:h-svh md:overflow-hidden md:p-0"
       data-palette={palette}
       data-accent={accent.startsWith("#") ? "custom" : accent}
       data-header-pin={headerPin}
       style={{
         fontFamily: "var(--app-font-sans)",
-        "--shell-header-h": "92px",
+        "--shell-header-h": "72px",
         "--shell-gap": "16px",
         "--shell-inline-end": "20px",
         "--shell-sidebar-width": iconOnly ? `${SIDEBAR_COLLAPSED_W}px` : `${SIDEBAR_EXPANDED_W}px`,
@@ -744,6 +781,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <BrandLogo variant="wordmark" className="h-9 w-auto max-w-[168px] object-contain" />
         </div>
         <div className="flex items-center gap-2">
+          <FullscreenToggle compact />
           <LanguageSwitcher compact />
           <DisplaySettingsMenu />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -766,63 +804,105 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <header
+      <div
         className={cn(
-          "shell-float relative z-40 hidden w-full min-w-0 shrink-0 items-stretch justify-start gap-0 border-0 border-b border-(--shell-line) bg-(image:--shell-header-bg) md:flex md:fixed md:inset-x-0 md:top-0 md:w-full md:ps-[calc(var(--shell-gap)+var(--shell-sidebar-width)+var(--shell-gap))] md:pe-(--shell-inline-end) md:transition-[padding-inline-start] md:duration-[380ms] md:ease-[cubic-bezier(0.22,1,0.36,1)]",
-          "min-h-(--shell-header-h)",
-          headerPin === "sticky" && "fixed top-0 z-40",
+          "shell-frame relative flex min-h-0 w-full flex-1 flex-col overflow-visible",
+          "md:rounded-none md:border-0 md:bg-transparent md:shadow-none",
         )}
       >
-        <div className="ms-[10px] flex min-h-(--shell-header-h) min-w-0 flex-[1_1_0] items-center justify-between gap-4 p-0">
-          <MenuSearch onPick={setLocation} username={username} role={role} />
-          <div className="ms-auto flex shrink-0 items-center gap-[13px]">
-            {showClock ? <LiveClock /> : null}
-            {isNavLocked("/fees") ? null : (
-            <Link
-              href="/fees"
-              className={SHELL_CIRCLE}
-              aria-label={pendingCount > 0 ? t("nav.pendingFees", { count: pendingCount }) : t("nav.fees")}
-            >
-              <img src="/notification.png" alt="" className={SHELL_ACTION_ICON} />
-              {pendingCount > 0 ? (
-                <span className="absolute -end-0.5 -top-[7px] grid h-[23px] min-w-[23px] place-items-center rounded-full bg-(--shell-blue) px-[5px] text-xs font-extrabold text-white">
-                  {pendingCount}
-                </span>
-              ) : null}
-            </Link>
-            )}
-            <LanguageSwitcher />
-            <DisplaySettingsMenu />
-            <AccountMenu displayName={displayName} username={username} role={role} onLogout={logout} />
-          </div>
-        </div>
-      </header>
-
-      <div className="relative flex min-h-0 min-w-0 flex-[1_1_auto] items-stretch gap-(--shell-gap,16px) md:pt-(--shell-header-h) md:pe-(--shell-inline-end) md:pb-(--shell-gap) md:ps-(--shell-gap)">
-        <aside
+        <header
           className={cn(
-            "app-sidebar-desktop relative z-60 hidden h-[calc(100vh-12px)] w-(--shell-sidebar-width) shrink-0 overflow-visible isolation-isolate transition-[width] duration-[280ms] ease-out md:sticky md:top-1.5 md:mt-[calc(-1*var(--shell-header-h)+6px)] md:block md:h-[calc(100vh-12px)]",
+            "shell-header-layer relative hidden min-h-(--shell-header-h) w-full shrink-0 items-center overflow-visible border-b border-(--shell-line) bg-(image:--shell-header-bg) md:flex",
+            headerPin === "sticky" && "sticky top-0",
           )}
         >
-          <SidebarContent
-            location={location}
-            username={username}
-            role={role}
-            displayName={displayName}
-            onLogout={logout}
-            iconOnly={iconOnly}
-            showCollapse={showCollapse}
-            collapsed={collapsed}
-            onCollapse={toggleCollapsed}
-          />
-        </aside>
-
-        <div className="shell-main relative z-1 flex w-full min-w-0 flex-[1_1_0] flex-col">
-          <main className="page-canvas relative z-0 flex-1 overflow-x-hidden bg-transparent px-5 py-2 md:px-6 md:py-4">
-            <div className="page-canvas-inner mx-auto max-w-[1440px] animate-[ipms-fade-up_var(--duration-complex)_var(--ease-out)]">
-              {children}
+          <div className="flex min-h-(--shell-header-h) w-full min-w-0 items-stretch">
+            <div
+              className={cn(
+                "shell-header-brand relative flex w-(--shell-sidebar-width) shrink-0 items-center overflow-visible border-e border-(--shell-line) transition-[width] duration-[280ms] ease-out",
+                iconOnly ? "justify-center px-2" : "justify-between gap-2 px-3.5",
+              )}
+            >
+              <Link href="/" className="flex min-w-0 items-center" aria-label="QSC">
+                {iconOnly ? (
+                  <BrandLogo variant="mark" className="h-8 w-8 object-contain" />
+                ) : (
+                  <BrandLogo variant="wordmark" className="h-9 w-auto max-w-[168px] object-contain" />
+                )}
+              </Link>
+              {showCollapse && iconOnly ? (
+                <SidebarCollapseButton
+                  collapsed={collapsed}
+                  onToggle={toggleCollapsed}
+                  expandLabel={t("nav.expandSidebar")}
+                  collapseLabel={t("nav.collapseSidebar")}
+                  className="absolute end-0 top-1/2 z-50 -translate-y-1/2 ltr:translate-x-1/2 rtl:-translate-x-1/2"
+                />
+              ) : null}
+              {showCollapse && !iconOnly ? (
+                <SidebarCollapseButton
+                  collapsed={collapsed}
+                  onToggle={toggleCollapsed}
+                  expandLabel={t("nav.expandSidebar")}
+                  collapseLabel={t("nav.collapseSidebar")}
+                  className="shrink-0"
+                />
+              ) : null}
             </div>
-          </main>
+
+            <div className="shell-header-main flex min-w-0 flex-1 items-center justify-between gap-4 px-4 pe-5">
+              <MenuSearch onPick={setLocation} username={username} role={role} />
+              <div className="ms-auto flex shrink-0 items-center gap-[13px]">
+                {showClock ? <LiveClock /> : null}
+                {isNavLocked("/fees") ? null : (
+                <Link
+                  href="/fees"
+                  className={SHELL_CIRCLE}
+                  aria-label={pendingCount > 0 ? t("nav.pendingFees", { count: pendingCount }) : t("nav.fees")}
+                >
+                  <img src="/notification.png" alt="" className={SHELL_ACTION_ICON} />
+                  {pendingCount > 0 ? (
+                    <span className="absolute -end-0.5 -top-[7px] grid h-[23px] min-w-[23px] place-items-center rounded-full bg-(--shell-blue) px-[5px] text-xs font-extrabold text-white">
+                      {pendingCount}
+                    </span>
+                  ) : null}
+                </Link>
+                )}
+                <FullscreenToggle />
+                <LanguageSwitcher />
+                <DisplaySettingsMenu />
+                <AccountMenu displayName={displayName} username={username} role={role} onLogout={logout} />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="relative z-0 flex min-h-0 min-w-0 flex-1 items-stretch overflow-hidden">
+          <aside
+            className={cn(
+              "shell-sidebar-layer app-sidebar-desktop relative hidden h-auto w-(--shell-sidebar-width) shrink-0 self-stretch overflow-visible isolation-isolate border-e border-(--shell-line) transition-[width] duration-[280ms] ease-out md:block",
+            )}
+          >
+            <SidebarContent
+              location={location}
+              username={username}
+              role={role}
+              displayName={displayName}
+              onLogout={logout}
+              iconOnly={iconOnly}
+              showCollapse={false}
+              collapsed={collapsed}
+              embedded
+            />
+          </aside>
+
+          <div className="shell-main shell-body-layer relative flex min-h-0 w-full min-w-0 flex-[1_1_0] flex-col">
+            <main className="page-canvas relative z-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-transparent px-5 py-2 md:px-6 md:py-4">
+              <div className="page-canvas-inner mx-auto max-w-[1440px] animate-[ipms-fade-up_var(--duration-complex)_var(--ease-out)]">
+                {children}
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </div>

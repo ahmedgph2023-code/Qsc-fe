@@ -77,7 +77,7 @@ export const ROUTE_ACCESS: Record<string, NavAccess> = {
   "/uat": { roles: ["admin", "pm", "approver", "compliance", "viewer"] },
   "/compliance": { roles: ["admin", "pm", "approver", "compliance", "viewer"] },
   "/risk": { roles: ["admin", "pm", "approver", "compliance", "viewer"] },
-  "/audit": { roles: ["admin", "pm", "approver", "compliance", "viewer"] },
+  "/audit": { roles: ["admin"] },
   "/data-import": { superAdminOnly: true },
   "/system-config": { superAdminOnly: true },
   "/users": { roles: ["admin"] },
@@ -160,7 +160,7 @@ export function canAccessNavItem(
 }
 
 export function firstAllowedHome(opts: { role?: string | null; username?: string | null }): string {
-  const candidates = ["/", "/customers", "/stocks", "/compliance", "/audit"];
+  const candidates = ["/", "/customers", "/stocks", "/compliance", "/users"];
   for (const href of candidates) {
     if (canAccessPath(href, opts)) return href;
   }

@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Shell } from "@/components/layout/Shell";
+import { Redirect } from "wouter";
 import { PageHeader, FilterBar, EmptyState, TableSkeletonRows } from "@/components/phase1/PageHeader";
 import { StatsSummaryBar } from "@/components/phase1/StatsSummaryBar";
 import { AnimatedNumber } from "@/components/phase1/AnimatedNumber";
@@ -34,7 +34,8 @@ function JsonDiff({ oldValue, newValue }: { oldValue?: unknown; newValue?: unkno
   );
 }
 
-export default function Audit() {
+/** Audit trail body — used inside Users admin tabs (no Shell). */
+export function AuditPanel({ showHeader = true }: { showHeader?: boolean }) {
   const { t } = useTranslation();
   const [objectType, setObjectType] = useState("");
   const [action, setAction] = useState("");
@@ -47,16 +48,18 @@ export default function Audit() {
   const paging = useClientTablePage(logs, `${objectType}|${action}`);
 
   return (
-    <Shell>
-      <PageHeader
-        title={t("audit.title")}
-        description={t("audit.description")}
-        meta={
-          <span className="rounded-md border border-border/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t("common.eventsCount", { count: logs.length })}
-          </span>
-        }
-      />
+    <>
+      {showHeader ? (
+        <PageHeader
+          title={t("audit.title")}
+          description={t("audit.description")}
+          meta={
+            <span className="rounded-md border border-border/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t("common.eventsCount", { count: logs.length })}
+            </span>
+          }
+        />
+      ) : null}
 
       <StatsSummaryBar
         className="mb-6"
@@ -176,6 +179,11 @@ export default function Audit() {
             </TableBody>
         </AppTable>
       )}
-    </Shell>
+    </>
   );
+}
+
+/** Legacy `/audit` URL → Users admin (Audit tab). */
+export default function Audit() {
+  return <Redirect to="/users?tab=audit" />;
 }

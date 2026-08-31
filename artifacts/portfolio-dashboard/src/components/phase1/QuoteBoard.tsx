@@ -333,7 +333,7 @@ export function QuoteBoard({
             const spark = (row.sparkline || []).length > 1 ? row.sparkline : undefined;
             return (
               <TableRow key={row.id} className="clients-row">
-                <TableCell className="ps-5">
+                <TableCell title={row.title} className="ps-5 max-w-[200px] overflow-hidden text-ellipsis">
                   <QuoteAsset row={row} />
                 </TableCell>
                 {showTrend ? (

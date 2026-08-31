@@ -13,14 +13,13 @@ import {
   YAxis,
 } from "recharts";
 import { Link } from "wouter";
-import { ChevronDown, Filter, Search } from "lucide-react";
+import { ChevronDown, Filter, Search, BarChart3, LayoutGrid, PieChart as PieChartIcon, Table2 } from "lucide-react";
 import type { Holding } from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SelectField } from "@/components/phase1/SelectField";
 import { SourceHint } from "@/components/phase1/SourceHint";
-import { TableSkeletonRows } from "@/components/phase1/PageHeader";
+import { PanelEmptyState, TableSkeletonRows } from "@/components/phase1/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -75,13 +74,37 @@ function formatNavWeight(weight: number | undefined) {
   return `${(weight * 100).toFixed(2)}%`;
 }
 
-function heatmapClass(pct: number | null | undefined) {
-  if (pct == null || Number.isNaN(pct)) return "text-muted-foreground";
-  if (pct <= -10) return "bg-red-500/15 text-loss font-semibold";
-  if (pct < 0) return "bg-red-500/10 text-loss";
-  if (pct < 5) return "bg-amber-500/15 text-amber-800 dark:text-amber-200";
-  if (pct < 15) return "bg-emerald-500/10 text-gain";
-  return "bg-emerald-500/20 text-gain font-semibold";
+function heatTone(pct: number) {
+  if (pct <= -10) return "border-[#f0c4c8] bg-[#fff0f1] text-[#c62839]";
+  if (pct < -0.005) return "border-[#f5d8db] bg-[#fff7f8] text-[#e24b57]";
+  if (pct <= 0.005) return "border-[#e4ebf5] bg-[#f5f8fc] text-[#53678f]";
+  if (pct < 5) return "border-[#d8eee3] bg-[#f2fbf6] text-[#1a8f65]";
+  if (pct < 15) return "border-[#c3e8d6] bg-[#edfff8] text-[#139366]";
+  return "border-[#a9dfc6] bg-[#e2faf0] text-[#0f7a54]";
+}
+
+function HeatPct({ pct }: { pct: number | null | undefined }) {
+  if (pct == null || Number.isNaN(pct)) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-[4.5rem] items-center justify-center rounded-lg border px-2 py-0.5 font-data text-[11.5px] font-semibold tabular-nums leading-none",
+        heatTone(pct),
+      )}
+    >
+      {formatSignedPct(pct)}
+    </span>
+  );
+}
+
+function SectorBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex max-w-[14rem] items-center truncate rounded-full border border-[#d7e2f2] bg-[linear-gradient(180deg,#ffffff,#f3f7fd)] px-2.5 py-1 font-mono text-[10.5px] font-semibold text-[#24365c] shadow-[inset_0_1px_0_#fff]">
+      {label}
+    </span>
+  );
 }
 
 function PlDot({ value }: { value: number }) {
@@ -289,61 +312,72 @@ export function HistoricalPortfolioDashboard({
   }, [filteredHoldings, showCash, cashBal, navWeightByStock, cashWeight]);
 
   return (
-    <section className="space-y-4 text-start" dir={dir} aria-label={t("historicalPortfolio.ariaLabel")} aria-busy={loading}>
+    <section className="customers space-y-4 text-start" dir={dir} aria-label={t("historicalPortfolio.ariaLabel")} aria-busy={loading}>
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(15rem,18rem)_minmax(0,1fr)]">
         <section className="cdp-sectors hp-sector-panel !m-0" aria-labelledby="hp-sector-title">
           <PanelTitle id="hp-sector-title" title={t("historicalPortfolio.sectoralBreakdown")} hint={src("sector")} />
-          <div className="h-40 shrink-0 px-2">
-            {loading ? (
-              <ChartSkeleton />
-            ) : sectorChart.length === 0 ? (
-              <p className="p-4 text-xs text-muted-foreground">{t("historicalPortfolio.noSectorWeights")}</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={sectorChart} dataKey="value" nameKey="name" innerRadius={40} outerRadius={64} paddingAngle={2}>
-                    {sectorChart.map((e) => (
-                      <Cell key={e.name} fill={e.fill} stroke="transparent" />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => `${Number(v).toFixed(1)}%`} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          <div className="cdp-sectors-mix mx-3 mb-2 shrink-0" aria-hidden>
-            {loading ? (
-              <Skeleton className="h-2 w-full rounded-full" />
-            ) : (
-              sectorChart.map((s) => (
-                <i key={s.name} style={{ width: `${s.value}%`, background: s.fill }} />
-              ))
-            )}
-          </div>
-          <ul className="cdp-sectors-list hp-sector-list">
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => (
+          {loading ? (
+            <>
+              <div className="h-40 shrink-0 px-2">
+                <ChartSkeleton />
+              </div>
+              <div className="cdp-sectors-mix mx-3 mb-2 shrink-0" aria-hidden>
+                <Skeleton className="h-2 w-full rounded-full" />
+              </div>
+              <ul className="cdp-sectors-list hp-sector-list">
+                {Array.from({ length: 4 }).map((_, i) => (
                   <li key={i} className="cdp-sector">
                     <div className="cdp-sector-top">
                       <Skeleton className="h-3.5 w-28 rounded-full" />
                       <Skeleton className="h-3.5 w-12 rounded-full" />
                     </div>
                   </li>
-                ))
-              : sectorChart.map((s) => (
-              <li key={s.name} className="cdp-sector">
-                <div className="cdp-sector-top">
-                  <span className="cdp-sector-name">
-                    <i style={{ background: s.fill }} />
-                    {s.name}
-                  </span>
-                  <span className="cdp-sector-meta">
-                    <em className="font-data">{s.value.toFixed(1)}%</em>
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+                ))}
+              </ul>
+            </>
+          ) : sectorChart.length === 0 ? (
+            <PanelEmptyState
+              className="min-h-[16rem] flex-1"
+              icon={<PieChartIcon className="size-8" strokeWidth={1.5} />}
+              title={t("historicalPortfolio.noSectorTitle")}
+              description={t("historicalPortfolio.noSectorWeights")}
+            />
+          ) : (
+            <>
+              <div className="h-40 shrink-0 px-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={sectorChart} dataKey="value" nameKey="name" innerRadius={40} outerRadius={64} paddingAngle={2}>
+                      {sectorChart.map((e) => (
+                        <Cell key={e.name} fill={e.fill} stroke="transparent" />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => `${Number(v).toFixed(1)}%`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="cdp-sectors-mix mx-3 mb-2 shrink-0" aria-hidden>
+                {sectorChart.map((s) => (
+                  <i key={s.name} style={{ width: `${s.value}%`, background: s.fill }} />
+                ))}
+              </div>
+              <ul className="cdp-sectors-list hp-sector-list">
+                {sectorChart.map((s) => (
+                  <li key={s.name} className="cdp-sector">
+                    <div className="cdp-sector-top">
+                      <span className="cdp-sector-name">
+                        <i style={{ background: s.fill }} />
+                        {s.name}
+                      </span>
+                      <span className="cdp-sector-meta">
+                        <em className="font-data">{s.value.toFixed(1)}%</em>
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </section>
 
         <div className="hp-holdings-card min-w-0">
@@ -459,141 +493,151 @@ export function HistoricalPortfolioDashboard({
             </div>
           </div>
 
-          <div className="cdp-table-wrap hp-table-wrap hp-thin-scroll">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <HintHead hint={src("ticker")}>{t("common.ticker")}</HintHead>
-                  <HintHead hint={src("company")}>{t("common.companyName")}</HintHead>
-                  <TableHead>{t("historicalPortfolio.buyingDate")}</TableHead>
-                  <HintHead hint={src("sectorCol")}>{t("common.sector")}</HintHead>
-                  <HintHead hint={src("shares")} className="text-start">{t("historicalPortfolio.shares")}</HintHead>
-                  <HintHead hint={src("costPrice")} className="text-start">{t("historicalPortfolio.costPrice")}</HintHead>
-                  <HintHead hint={src("price")} className="text-start">{t("common.price")}</HintHead>
-                  <HintHead hint={src("equity")} className="text-start">{t("historicalPortfolio.equity")}</HintHead>
-                  <HintHead hint={src("totalCost")} className="text-start">{t("historicalPortfolio.totalCost")}</HintHead>
-                  <HintHead hint={src("profitLoss")} className="text-start">{t("historicalPortfolio.profitLoss")}</HintHead>
-                  <HintHead hint={src("weightPct")} className="text-start">{t("historicalPortfolio.weightPct")}</HintHead>
-                  <HintHead hint={src("holdingDays")} className="text-start">{t("historicalPortfolio.holdingDays")}</HintHead>
-                  <HintHead hint={src("returnContribution")} className="text-start">{t("historicalPortfolio.returnContribution")}</HintHead>
-                  <HintHead hint={src("annualizedReturn")} className="text-start">{t("historicalPortfolio.annualizedReturn")}</HintHead>
-                  <HintHead hint={src("returnCol")} className="text-start">{t("historicalPortfolio.return")}</HintHead>
-                  <HintHead hint={src("sectoralDis")} className="text-start">{t("historicalPortfolio.sectoralDis")}</HintHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableSkeletonRows cols={TABLE_COLS} rows={8} />
-                ) : filteredHoldings.length === 0 && !showCash ? (
+          {!loading && filteredHoldings.length === 0 && !showCash ? (
+            <PanelEmptyState
+              className="min-h-[14rem]"
+              icon={<Table2 className="size-8" strokeWidth={1.5} />}
+              title={t("historicalPortfolio.noRowsTitle")}
+              description={t("historicalPortfolio.noRows")}
+            />
+          ) : (
+            <div className="cdp-table-wrap hp-table-wrap hp-thin-scroll">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={TABLE_COLS} className="py-10 text-center text-muted-foreground">
-                      {t("historicalPortfolio.noRows")}
-                    </TableCell>
+                    <HintHead hint={src("ticker")}>{t("common.ticker")}</HintHead>
+                    <HintHead hint={src("company")}>{t("common.companyName")}</HintHead>
+                    <TableHead>{t("historicalPortfolio.buyingDate")}</TableHead>
+                    <HintHead hint={src("sectorCol")}>{t("common.sector")}</HintHead>
+                    <HintHead hint={src("shares")} className="text-start">{t("historicalPortfolio.shares")}</HintHead>
+                    <HintHead hint={src("costPrice")} className="text-start">{t("historicalPortfolio.costPrice")}</HintHead>
+                    <HintHead hint={src("price")} className="text-start">{t("common.price")}</HintHead>
+                    <HintHead hint={src("equity")} className="text-start">{t("historicalPortfolio.equity")}</HintHead>
+                    <HintHead hint={src("totalCost")} className="text-start">{t("historicalPortfolio.totalCost")}</HintHead>
+                    <HintHead hint={src("profitLoss")} className="text-start">{t("historicalPortfolio.profitLoss")}</HintHead>
+                    <HintHead hint={src("weightPct")} className="text-start">{t("historicalPortfolio.weightPct")}</HintHead>
+                    <HintHead hint={src("holdingDays")} className="text-start">{t("historicalPortfolio.holdingDays")}</HintHead>
+                    <HintHead hint={src("returnContribution")} className="text-start">{t("historicalPortfolio.returnContribution")}</HintHead>
+                    <HintHead hint={src("annualizedReturn")} className="text-start">{t("historicalPortfolio.annualizedReturn")}</HintHead>
+                    <HintHead hint={src("returnCol")} className="text-start">{t("historicalPortfolio.return")}</HintHead>
+                    <HintHead hint={src("sectoralDis")} className="text-start">{t("historicalPortfolio.sectoralDis")}</HintHead>
                   </TableRow>
-                ) : (
-                  <>
-                    {filteredHoldings.map((h) => {
-                      const w = navWeightByStock.get(h.stockId);
-                      const sectorW = sectorWeightByName.get(h.sector);
-                      return (
-                        <TableRow key={h.stockId}>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableSkeletonRows cols={TABLE_COLS} rows={5} />
+                  ) : (
+                    <>
+                      {filteredHoldings.map((h) => {
+                        const w = navWeightByStock.get(h.stockId);
+                        const sectorW = sectorWeightByName.get(h.sector);
+                        return (
+                          <TableRow key={h.stockId}>
+                            <TableCell>
+                              <Link href={`/stocks/${h.stockId}?portfolioId=${portfolioId}`}>
+                                <div className="flex items-center gap-2 hover:text-primary">
+                                  <div className="sym-tag">{h.ticker}</div>
+                                </div>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="max-w-[12rem] truncate text-xs text-muted-foreground" title={h.companyName || undefined}>
+                              {h.companyName || "—"}
+                            </TableCell>
+                            <TableCell className="font-data text-xs tabular-nums whitespace-nowrap">{formatBuyingDate(h.openedOn)}</TableCell>
                           <TableCell>
-                            <Link href={`/stocks/${h.stockId}?portfolioId=${portfolioId}`}>
-                              <div className="flex items-center gap-2 hover:text-primary">
-                                <div className="sym-tag">{h.ticker}</div>
-                              </div>
-                            </Link>
+                            <SectorBadge label={h.sector} />
                           </TableCell>
-                          <TableCell className="max-w-[12rem] truncate text-xs text-muted-foreground" title={h.companyName || undefined}>
-                            {h.companyName || "—"}
-                          </TableCell>
-                          <TableCell className="font-data text-xs tabular-nums whitespace-nowrap">{formatBuyingDate(h.openedOn)}</TableCell>
+                            <TableCell className="text-start font-data cdp-col-qty">{h.quantity.toLocaleString()}</TableCell>
+                            <TableCell className="text-start font-data cdp-col-avg">{formatCurrency(h.avgCost)}</TableCell>
+                            <TableCell className="text-start font-data cdp-col-price">{formatCurrency(h.currentPrice)}</TableCell>
+                            <TableCell className="text-start font-data cdp-col-mv">{formatCurrency(h.currentValue)}</TableCell>
+                            <TableCell className="text-start font-data cdp-col-cost">{formatCurrency(h.totalCost)}</TableCell>
+                            <TableCell className={cn("text-start font-data", h.gainLossValue >= 0 ? "text-gain" : "text-loss")}>
+                              <span className="inline-flex items-center justify-start gap-1.5">
+                                <PlDot value={h.gainLossValue} />
+                                {formatCurrency(h.gainLossValue)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-start">
+                              <WeightBar weight={w} />
+                            </TableCell>
+                            <TableCell className="text-start font-data">{h.holdingDays ?? "—"}</TableCell>
+                            <TableCell className="text-start">
+                              <HeatPct pct={h.excelContributionPct} />
+                            </TableCell>
+                            <TableCell className="text-start">
+                              <HeatPct pct={h.excelAnnualizedPct} />
+                            </TableCell>
+                            <TableCell className="text-start">
+                              <HeatPct pct={h.gainLossPct} />
+                            </TableCell>
+                            <TableCell className="text-start font-data cdp-col-wt">
+                              {sectorW == null ? "—" : `${(sectorW * 100).toFixed(1)}%`}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {showCash && (
+                        <TableRow>
                           <TableCell>
-                            <Badge variant="outline" className="font-mono bg-card text-[10px]">
-                              {h.sector}
-                            </Badge>
+                            <div className="sym-tag">{cashLabel}</div>
                           </TableCell>
-                          <TableCell className="text-start font-data cdp-col-qty">{h.quantity.toLocaleString()}</TableCell>
-                          <TableCell className="text-start font-data cdp-col-avg">{formatCurrency(h.avgCost)}</TableCell>
-                          <TableCell className="text-start font-data cdp-col-price">{formatCurrency(h.currentPrice)}</TableCell>
-                          <TableCell className="text-start font-data cdp-col-mv">{formatCurrency(h.currentValue)}</TableCell>
-                          <TableCell className="text-start font-data cdp-col-cost">{formatCurrency(h.totalCost)}</TableCell>
-                          <TableCell className={cn("text-start font-data", h.gainLossValue >= 0 ? "text-gain" : "text-loss")}>
+                          <TableCell
+                            className="max-w-[12rem] truncate text-xs text-muted-foreground"
+                            title={t("historicalPortfolio.cashCompany")}
+                          >
+                            {t("historicalPortfolio.cashCompany")}
+                          </TableCell>
+                          <TableCell className="font-data text-xs tabular-nums whitespace-nowrap">{formatBuyingDate(cashOpenedOn)}</TableCell>
+                          <TableCell>
+                            <SectorBadge label={cashLabel} />
+                          </TableCell>
+                          <TableCell className="text-start font-data cdp-col-qty">{Math.round(cashBal).toLocaleString()}</TableCell>
+                          <TableCell className="text-start font-data">—</TableCell>
+                          <TableCell className="text-start font-data cdp-col-price">1.00</TableCell>
+                          <TableCell className={cn("text-start font-data cdp-col-mv", cashBal >= 0 ? "text-gain" : "text-loss")}>
+                            {formatCurrency(cashBal)}
+                          </TableCell>
+                          <TableCell className="text-start font-data cdp-col-cost">{formatCurrency(cashBal)}</TableCell>
+                          <TableCell className="text-start font-data">
                             <span className="inline-flex items-center justify-start gap-1.5">
-                              <PlDot value={h.gainLossValue} />
-                              {formatCurrency(h.gainLossValue)}
+                              <PlDot value={0} />{formatCurrency(0)}
                             </span>
                           </TableCell>
                           <TableCell className="text-start">
-                            <WeightBar weight={w} />
+                            <WeightBar weight={cashWeight} />
                           </TableCell>
-                          <TableCell className="text-start font-data">{h.holdingDays ?? "—"}</TableCell>
-                          <TableCell className={cn("text-start font-data rounded-md px-1", heatmapClass(h.excelContributionPct))}>
-                            {formatSignedPct(h.excelContributionPct)}
+                          <TableCell className="text-start font-data">{cashHoldingDays ?? "—"}</TableCell>
+                          <TableCell className="text-start">
+                            <HeatPct pct={0} />
                           </TableCell>
-                          <TableCell className={cn("text-start font-data rounded-md px-1", heatmapClass(h.excelAnnualizedPct))}>
-                            {formatSignedPct(h.excelAnnualizedPct)}
+                          <TableCell className="text-start">
+                            <HeatPct pct={0} />
                           </TableCell>
-                          <TableCell className={cn("text-start font-data rounded-md px-1", heatmapClass(h.gainLossPct))}>
-                            {formatSignedPct(h.gainLossPct)}
+                          <TableCell className="text-start">
+                            <HeatPct pct={0} />
                           </TableCell>
                           <TableCell className="text-start font-data cdp-col-wt">
-                            {sectorW == null ? "—" : `${(sectorW * 100).toFixed(1)}%`}
+                            {cashWeight == null ? "—" : `${(cashWeight * 100).toFixed(1)}%`}
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
-                    {showCash && (
-                      <TableRow>
-                        <TableCell>
-                          <div className="sym-tag">{cashLabel}</div>
+                      )}
+                      <TableRow className="hp-total-row font-semibold">
+                        <TableCell colSpan={7}>{t("historicalPortfolio.total")}</TableCell>
+                        <TableCell className="text-start font-data cdp-col-mv">{formatCurrency(totals.equityValue)}</TableCell>
+                        <TableCell className="text-start font-data cdp-col-cost">{formatCurrency(totals.totalCost)}</TableCell>
+                        <TableCell className={cn("text-start font-data", totals.pl >= 0 ? "text-gain" : "text-loss")}>
+                          {formatCurrency(totals.pl)}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">—</TableCell>
-                        <TableCell className="font-data text-xs tabular-nums whitespace-nowrap">{formatBuyingDate(cashOpenedOn)}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-mono bg-card text-[10px]">
-                            {cashLabel}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-start font-data cdp-col-qty">{Math.round(cashBal).toLocaleString()}</TableCell>
-                        <TableCell className="text-start font-data">—</TableCell>
-                        <TableCell className="text-start font-data cdp-col-price">1.00</TableCell>
-                        <TableCell className={cn("text-start font-data cdp-col-mv", cashBal >= 0 ? "text-gain" : "text-loss")}>
-                          {formatCurrency(cashBal)}
-                        </TableCell>
-                        <TableCell className="text-start font-data cdp-col-cost">{formatCurrency(cashBal)}</TableCell>
-                        <TableCell className="text-start font-data">
-                          <span className="inline-flex items-center justify-start gap-1.5">
-                            <PlDot value={0} />{formatCurrency(0)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-start">
-                          <WeightBar weight={cashWeight} />
-                        </TableCell>
-                        <TableCell className="text-start font-data">{cashHoldingDays ?? "—"}</TableCell>
-                        <TableCell className="text-start font-data">{formatSignedPct(0)}</TableCell>
-                        <TableCell className="text-start font-data">{formatSignedPct(0)}</TableCell>
-                        <TableCell className="text-start font-data">{formatSignedPct(0)}</TableCell>
-                        <TableCell className="text-start font-data cdp-col-wt">
-                          {cashWeight == null ? "—" : `${(cashWeight * 100).toFixed(1)}%`}
-                        </TableCell>
+                        <TableCell className="text-start font-data cdp-col-wt">{(totals.weight * 100).toFixed(1)}%</TableCell>
+                        <TableCell colSpan={5} />
                       </TableRow>
-                    )}
-                    <TableRow className="hp-total-row font-semibold">
-                      <TableCell colSpan={7}>{t("historicalPortfolio.total")}</TableCell>
-                      <TableCell className="text-start font-data cdp-col-mv">{formatCurrency(totals.equityValue)}</TableCell>
-                      <TableCell className="text-start font-data cdp-col-cost">{formatCurrency(totals.totalCost)}</TableCell>
-                      <TableCell className={cn("text-start font-data", totals.pl >= 0 ? "text-gain" : "text-loss")}>
-                        {formatCurrency(totals.pl)}
-                      </TableCell>
-                      <TableCell className="text-start font-data cdp-col-wt">{(totals.weight * 100).toFixed(1)}%</TableCell>
-                      <TableCell colSpan={5} />
-                    </TableRow>
-                  </>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -604,7 +648,11 @@ export function HistoricalPortfolioDashboard({
             {loading ? (
               <ChartSkeleton />
             ) : returnChart.length === 0 ? (
-              <p className="p-4 text-xs text-muted-foreground">{t("historicalPortfolio.noReturnSeries")}</p>
+              <PanelEmptyState
+                icon={<BarChart3 className="size-8" strokeWidth={1.5} />}
+                title={t("historicalPortfolio.noReturnTitle")}
+                description={t("historicalPortfolio.noReturnSeries")}
+              />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={returnChart} layout="vertical" margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
@@ -628,7 +676,11 @@ export function HistoricalPortfolioDashboard({
             {loading ? (
               <ChartSkeleton />
             ) : allocationChart.length === 0 ? (
-              <p className="p-4 text-xs text-muted-foreground">{t("historicalPortfolio.noAllocationWeights")}</p>
+              <PanelEmptyState
+                icon={<LayoutGrid className="size-8" strokeWidth={1.5} />}
+                title={t("historicalPortfolio.noAllocationTitle")}
+                description={t("historicalPortfolio.noAllocationWeights")}
+              />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={allocationChart} margin={{ left: 8, right: 12, top: 12, bottom: 48 }}>

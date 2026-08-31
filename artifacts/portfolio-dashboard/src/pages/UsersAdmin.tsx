@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, PenLine, UserCog } from "lucide-react";
 import { Redirect } from "wouter";
 import { Shell } from "@/components/layout/Shell";
 import { PageHeader, EmptyState, FilterBar } from "@/components/phase1/PageHeader";
+import { CDP_TAB, CdpTabsList } from "@/components/phase1/CdpTabs";
+import { AuditPanel } from "@/pages/Audit";
 import { createUser, deleteUser, listUsers, updateUser, type StaffUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +17,7 @@ import { TablePageFooter } from "@/components/phase1/TablePageFooter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SelectField } from "@/components/phase1/SelectField";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/AuthContext";
 import { canAccessPath } from "@/lib/access";
 
@@ -28,11 +31,19 @@ const emptyForm = {
   password: "",
 };
 
+type AdminTab = "users" | "audit";
+
+function initialTab(): AdminTab {
+  const raw = new URLSearchParams(window.location.search).get("tab");
+  return raw === "audit" ? "audit" : "users";
+}
+
 export default function UsersAdmin() {
   const { t } = useTranslation();
   const { role, username, userId } = useAuth();
   const allowed = canAccessPath("/users", { role, username });
   const qc = useQueryClient();
+  const [tab, setTab] = useState<AdminTab>(initialTab);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<StaffUser | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -81,6 +92,15 @@ export default function UsersAdmin() {
     onError: (e: Error) => setError(e.message),
   });
 
+  const headerMeta = useMemo(
+    () => (
+      <span className="rounded-md border border-border/70 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        {tab === "audit" ? t("nav.items.audit") : t("nav.items.users")}
+      </span>
+    ),
+    [tab, t],
+  );
+
   if (!allowed) return <Redirect to="/" />;
 
   function openCreate() {
@@ -103,82 +123,107 @@ export default function UsersAdmin() {
     setOpen(true);
   }
 
+  function onTabChange(next: string) {
+    const value = next === "audit" ? "audit" : "users";
+    setTab(value);
+    const url = new URL(window.location.href);
+    if (value === "audit") url.searchParams.set("tab", "audit");
+    else url.searchParams.delete("tab");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  }
+
   const roleOptions = ROLE_VALUES.map((value) => ({ value, label: value }));
 
   return (
     <Shell>
       <PageHeader
         title={t("usersAdmin.title")}
-        description={t("usersAdmin.description")}
+        description={tab === "audit" ? t("audit.description") : t("usersAdmin.description")}
+        meta={headerMeta}
         actions={
-          <Button onClick={openCreate}>
-            <Plus className="me-2 h-4 w-4" /> {t("usersAdmin.addUser")}
-          </Button>
+          tab === "users" ? (
+            <Button onClick={openCreate}>
+              <Plus className="me-2 h-4 w-4" /> {t("usersAdmin.addUser")}
+            </Button>
+          ) : null
         }
       />
 
-      <FilterBar>
-        <p className="text-sm text-muted-foreground">
-          <UserCog className="me-2 inline h-4 w-4" />
-          {t("usersAdmin.passwordHint")}
-        </p>
-        <p className="text-sm text-muted-foreground">{t("usersAdmin.rolesMap")}</p>
-      </FilterBar>
+      <Tabs value={tab} onValueChange={onTabChange} className="cdp-data">
+        <CdpTabsList value={tab} className="mb-5">
+          <TabsTrigger value="users" className={CDP_TAB}>{t("usersAdmin.tabUsers")}</TabsTrigger>
+          <TabsTrigger value="audit" className={CDP_TAB}>{t("usersAdmin.tabAudit")}</TabsTrigger>
+        </CdpTabsList>
 
-      {isLoading ? (
-        <p className="p-6 text-sm text-muted-foreground">{t("common.loading")}</p>
-      ) : users.length === 0 ? (
-        <EmptyState title={t("usersAdmin.emptyTitle")} description={t("usersAdmin.emptyDesc")} />
-      ) : (
-        <AppTable
-          footer={
-            <TablePageFooter
-              total={paging.total}
-              page={paging.page}
-              pageSize={paging.pageSize}
-              pageSizes={paging.pageSizes}
-              loading={isLoading}
-              onPageChange={paging.setPage}
-              onPageSizeChange={paging.setPageSize}
-            />
-          }
-        >
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("common.username")}</TableHead>
-                <TableHead>{t("common.displayName")}</TableHead>
-                <TableHead>{t("common.role")}</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead className="text-end">{t("common.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paging.paged.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-mono">{u.username}</TableCell>
-                  <TableCell>{u.displayName}</TableCell>
-                  <TableCell className="font-mono">{u.role}</TableCell>
-                  <TableCell className="capitalize">{u.status === "active" ? t("common.active") : t("common.disabled")}</TableCell>
-                  <TableCell className="space-x-1 rtl:space-x-reverse text-end">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(u)} title={t("common.edit")}>
-                      <PenLine className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-rose-400"
-                      disabled={u.id === userId}
-                      onClick={() => setDeleteId(u.id)}
-                      title={t("common.delete")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-        </AppTable>
-      )}
+        <TabsContent value="users" className="mt-0">
+          <FilterBar>
+            <p className="text-sm text-muted-foreground">
+              <UserCog className="me-2 inline h-4 w-4" />
+              {t("usersAdmin.passwordHint")}
+            </p>
+            <p className="text-sm text-muted-foreground">{t("usersAdmin.rolesMap")}</p>
+          </FilterBar>
+
+          {isLoading ? (
+            <p className="p-6 text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : users.length === 0 ? (
+            <EmptyState title={t("usersAdmin.emptyTitle")} description={t("usersAdmin.emptyDesc")} />
+          ) : (
+            <AppTable
+              footer={
+                <TablePageFooter
+                  total={paging.total}
+                  page={paging.page}
+                  pageSize={paging.pageSize}
+                  pageSizes={paging.pageSizes}
+                  loading={isLoading}
+                  onPageChange={paging.setPage}
+                  onPageSizeChange={paging.setPageSize}
+                />
+              }
+            >
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("common.username")}</TableHead>
+                    <TableHead>{t("common.displayName")}</TableHead>
+                    <TableHead>{t("common.role")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead className="text-end">{t("common.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paging.paged.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-mono">{u.username}</TableCell>
+                      <TableCell>{u.displayName}</TableCell>
+                      <TableCell className="font-mono">{u.role}</TableCell>
+                      <TableCell className="capitalize">{u.status === "active" ? t("common.active") : t("common.disabled")}</TableCell>
+                      <TableCell className="space-x-1 rtl:space-x-reverse text-end">
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(u)} title={t("common.edit")}>
+                          <PenLine className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-rose-400"
+                          disabled={u.id === userId}
+                          onClick={() => setDeleteId(u.id)}
+                          title={t("common.delete")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+            </AppTable>
+          )}
+        </TabsContent>
+
+        <TabsContent value="audit" className="mt-0">
+          <AuditPanel showHeader={false} />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[560px]">

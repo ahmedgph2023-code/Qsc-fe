@@ -219,7 +219,7 @@ export function HoldingsCashOverview({
     },
     {
       id: "excel-gain",
-      icon: "/excel.png",
+      icon: "/chart.png",
       label: t("holdingsOverview.excelEquityGain"),
       value: <AnimatedNumber value={excelGain} format="currency" signed loading={loading} />,
       hint: t("holdingsOverview.excelGainNote"),

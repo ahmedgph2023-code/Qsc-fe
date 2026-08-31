@@ -239,6 +239,7 @@ export function DataTableToolbar({
   filterCount = 0,
   filterPanel,
   actions,
+  className,
 }: {
   icon?: string;
   count?: ReactNode;
@@ -252,6 +253,7 @@ export function DataTableToolbar({
   filterCount?: number;
   filterPanel?: ReactNode;
   actions?: ReactNode;
+  className?: string;
 }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -271,7 +273,7 @@ export function DataTableToolbar({
 
   return (
     <>
-      <div className="clients-table-toolbar">
+      <div className={cn("clients-table-toolbar", className)}>
         <div className="flex min-w-0 flex-1 items-center gap-3 text-[15px] font-bold tracking-[-0.01em] text-[var(--shell-muted)] sm:text-base">
           {icon ? <img src={icon} alt="" className="clients-toolbar-icon shrink-0" /> : null}
           {count != null ? (

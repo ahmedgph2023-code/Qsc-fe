@@ -82,7 +82,7 @@ export function DatePicker({
             {prefix && value ? (
               <>
                 <span>{prefix}</span>
-                <bdi className="font-data truncate" dir="ltr">
+                <bdi className="truncate text-[length:inherit] tabular-nums text-[var(--shell-blue)]" dir="ltr">
                   {formatDateLabel(value)}
                 </bdi>
               </>

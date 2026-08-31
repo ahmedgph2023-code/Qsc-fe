@@ -142,6 +142,7 @@ export function applyBrandTheme(
   root.style.setProperty("--brand-hover", hover);
   root.style.setProperty("--brand-soft", soft);
   root.style.setProperty("--shell-accent", accentHex);
+  root.style.setProperty("--cdp-blue", main);
 
   root.style.setProperty("--primary", mainHsl);
   root.style.setProperty("--primary-foreground", "0 0% 100%");
@@ -149,6 +150,8 @@ export function applyBrandTheme(
   root.style.setProperty("--sidebar-primary", mainHsl);
   root.style.setProperty("--sidebar-ring", mainHsl);
   root.style.setProperty("--chart-1", mainHsl);
+  root.style.setProperty("--chart-4", hexToHslChannels(accentHex));
+  root.style.setProperty("--maroon", mainHsl);
 
   root.style.setProperty("--color-primary-ink", main);
   root.style.setProperty("--color-primary-hover", hover);

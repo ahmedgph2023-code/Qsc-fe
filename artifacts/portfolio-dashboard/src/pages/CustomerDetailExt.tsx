@@ -195,48 +195,48 @@ export default function CustomerDetailExt() {
   return (
     <Shell>
       <div className="cdp text-start" dir={i18n.dir()}>
-        <header className="cdp-header">
-          <div className="cdp-title">
+        <header className=" mb-8 w-full max-w-full flex justify-between items-center">
+          <div className="cdp-title text-nowrap !text-2xl">
             <h1>{extClientDisplayName(data, i18n.language) || t("customers2.noName")}</h1>
-            <p>
-              {t("customers2.nameHint")}
-              {" · "}
+            <p className="m-0 text-sm text-[#586b94]">
               {t("customers2.nin")}:{" "}
-              <bdi className="font-data" dir="ltr">{data.nin || "—"}</bdi>
+              <bdi className="tabular-nums text-[var(--shell-blue)]" dir="ltr">{data.nin || "—"}</bdi>
               {" · "}
               {t("customers2.account")}:{" "}
-              <bdi className="font-data" dir="ltr">{data.accountNumber}</bdi>
+              <bdi className="tabular-nums text-[var(--shell-blue)]" dir="ltr">{data.accountNumber}</bdi>
             </p>
           </div>
-          <div className="cdp-header-actions">
-            <button
-              type="button"
-              className={cn("cdp-more-metrics", showSourceHints && "is-open")}
-              onClick={() => setShowSourceHints((v) => !v)}
-              aria-pressed={showSourceHints}
-            >
-              <Info className="me-2 size-3.5" strokeWidth={1.75} />
-              {showSourceHints ? t("customers2.hideHints") : t("customers2.showHints")}
-            </button>
-            <DatePicker
-              className="cdp-date"
-              prefix={t("historicalPortfolio.dateLabel")}
-              value={asOf}
-              onChange={(iso) => setAsOf(iso || today)}
-              max={today}
-            />
-            <Button asChild variant="outline">
-              <Link href={`/statements?client=${encodeURIComponent(id || "")}&kind=portfolio&asOf=${encodeURIComponent(asOf)}`}>
-                <FileText className="me-2 size-4" />
-                {t("statements.open")}
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href={`/balances?client=${encodeURIComponent(id || "")}&asOf=${encodeURIComponent(asOf)}`}>
-                <Scale className="me-2 size-4" />
-                {t("balances.open")}
-              </Link>
-            </Button>
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <div className="cdp-header-actions ms-auto">
+              <button
+                type="button"
+                className={cn("cdp-more-metrics", showSourceHints && "is-open")}
+                onClick={() => setShowSourceHints((v) => !v)}
+                aria-pressed={showSourceHints}
+              >
+                <Info className="me-2 size-3.5" strokeWidth={1.75} />
+                {showSourceHints ? t("customers2.hideHints") : t("customers2.showHints")}
+              </button>
+              <DatePicker
+                className="cdp-date"
+                prefix={t("historicalPortfolio.dateLabel")}
+                value={asOf}
+                onChange={(iso) => setAsOf(iso || today)}
+                max={today}
+              />
+              <Button asChild variant="outline">
+                <Link href={`/statements?client=${encodeURIComponent(id || "")}&kind=portfolio&asOf=${encodeURIComponent(asOf)}`}>
+                  <FileText className="me-2 size-4" />
+                  {t("statements.open")}
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/balances?client=${encodeURIComponent(id || "")}&asOf=${encodeURIComponent(asOf)}`}>
+                  <Scale className="me-2 size-4" />
+                  {t("balances.open")}
+                </Link>
+              </Button>
+            </div>
           </div>
         </header>
         {viewingPast && (

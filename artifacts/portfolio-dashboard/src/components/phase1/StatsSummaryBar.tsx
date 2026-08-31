@@ -56,6 +56,7 @@ export function StatsSummaryBar({
       aria-label={ariaLabel}
       className={cn(
         "grid overflow-visible rounded-[28px] border border-white/95 bg-[linear-gradient(160deg,#ffffff_0%,#f7f9ff_100%)] shadow-[0_18px_40px_rgba(57,82,143,0.10),inset_1px_1px_0_#fff]",
+        "dark:border-white/10 dark:bg-[linear-gradient(160deg,#1a2438_0%,#121a2c_100%)] dark:shadow-[0_18px_40px_rgba(0,0,0,0.35),inset_1px_1px_0_rgba(255,255,255,0.04)]",
         colClass,
         compact && "rounded-[22px]",
         large && "rounded-[32px]",
@@ -71,7 +72,7 @@ export function StatsSummaryBar({
           <div
             key={item.id}
             className={cn(
-              "relative flex min-w-0 items-center gap-4 border-[#e6ecf7]",
+              "relative flex min-w-0 items-center gap-4 border-[#e6ecf7] dark:border-white/10",
               item.info && "pe-9 pt-1",
               compact
                 ? "gap-3 px-4 py-3.5 sm:gap-3.5 sm:px-5 sm:py-4"
@@ -93,7 +94,7 @@ export function StatsSummaryBar({
             ) : null}
             <div
               className={cn(
-                "relative grid shrink-0 place-items-center overflow-hidden rounded-[18px] border border-white",
+                "relative grid shrink-0 place-items-center overflow-hidden rounded-[18px] border border-white dark:border-white/15 dark:bg-white/5",
                 compact && "size-[48px] sm:size-[52px] sm:rounded-[16px]",
                 !compact && large && "size-[84px] rounded-[22px] sm:size-[96px] sm:rounded-[26px]",
                 !compact && !large && "size-[58px] sm:size-[64px] sm:rounded-[20px]",
@@ -107,10 +108,10 @@ export function StatsSummaryBar({
                 style={iconStyle}
               />
             </div>
-            <div className="min-w-0 flex-1 text-start leading-none">
+            <div className="@container min-w-0 flex-1 text-start leading-none">
               <p
                 className={cn(
-                  "font-semibold leading-snug text-[#5b6e96]",
+                  "font-semibold leading-snug text-[#5b6e96] dark:text-[var(--color-text-secondary)]",
                   compact && "text-[11px] sm:text-[12px]",
                   large && "text-[13px] tracking-[-0.01em] sm:text-[15px]",
                   !compact && !large && "text-[12px] sm:text-[13px]",
@@ -120,10 +121,10 @@ export function StatsSummaryBar({
               </p>
               <div
                 className={cn(
-                  "mt-0.5 min-w-0 w-full overflow-visible text-start font-extrabold leading-none tracking-[-0.03em] text-[#0e1837]",
-                  compact && "text-[1.15rem] sm:text-[1.3rem]",
-                  large && "text-[1.7rem] tracking-[-0.04em] sm:text-[2.05rem]",
-                  !compact && !large && "text-[1.45rem] sm:text-[1.7rem]",
+                  "mt-0.5 min-w-0 w-full overflow-hidden text-start font-extrabold leading-none tracking-[-0.03em] text-[#0e1837] dark:text-[var(--color-text-primary)]",
+                  compact && "text-[clamp(0.95rem,12cqi,1.3rem)]",
+                  large && "text-[clamp(1.1rem,14cqi,2.05rem)] tracking-[-0.04em]",
+                  !compact && !large && "text-[clamp(1rem,13cqi,1.7rem)]",
                   item.valueClassName,
                 )}
               >
@@ -134,7 +135,7 @@ export function StatsSummaryBar({
                 )}
               </div>
               <p className={cn(
-                "leading-snug text-[#8a97b0] [unicode-bidi:plaintext]",
+                "leading-snug text-[#8a97b0] dark:text-[var(--color-text-muted)] [unicode-bidi:plaintext]",
                 compact && "mt-1 text-[10px] sm:text-[11px]",
                 large && "mt-1 text-[12px] sm:text-[13px]",
                 !compact && !large && "mt-1 text-[11px] sm:text-[12px]",

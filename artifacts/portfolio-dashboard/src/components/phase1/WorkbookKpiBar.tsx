@@ -2,12 +2,6 @@ import { useTranslation } from "react-i18next";
 import { AnimatedNumber } from "@/components/phase1/AnimatedNumber";
 import { StatsSummaryBar } from "@/components/phase1/StatsSummaryBar";
 
-function formatSignedPct(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return "—";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
-
 /** Sheet1 header KPIs: Value / Growth / Index / QAR Gain. */
 export function WorkbookKpiBar({
   nav,
@@ -36,11 +30,11 @@ export function WorkbookKpiBar({
     <StatsSummaryBar
       ariaLabel={t("historicalPortfolio.ariaLabel")}
       loading={loading}
-      iconSize={56}
+      iconSize={64}
       items={[
         {
           id: "value",
-          icon: "/Holdings + cash.png",
+          icon: "/Total AUM.png",
           label: t("historicalPortfolio.portfolioValue"),
           value: <AnimatedNumber value={nav} format="currency" loading={loading} />,
           hint: t("historicalPortfolio.portfolioValueNote"),
@@ -48,7 +42,7 @@ export function WorkbookKpiBar({
         },
         {
           id: "growth",
-          icon: "/growth.png",
+          icon: "/analytics-chart.png",
           label: t("historicalPortfolio.portfolioGrowth"),
           value: <AnimatedNumber value={growthPct} format="percent" signed loading={loading} />,
           hint: t("historicalPortfolio.portfolioGrowthNote"),
@@ -58,9 +52,9 @@ export function WorkbookKpiBar({
         },
         {
           id: "index",
-          icon: "/finance.png",
+          icon: "/bar-chart.png",
           label: t("historicalPortfolio.indexPerformance"),
-          value: loading ? "…" : formatSignedPct(indexPct),
+          value: <AnimatedNumber value={indexPct} format="percent" signed loading={loading} />,
           hint: indexName
             ? t("historicalPortfolio.indexPerformanceHint", {
               name: indexName,
@@ -74,7 +68,7 @@ export function WorkbookKpiBar({
         },
         {
           id: "gain",
-          icon: "/excel.png",
+          icon: "/Unrealized P&L.png",
           label: t("historicalPortfolio.portfolioQarGain"),
           value: <AnimatedNumber value={gain} format="currency" signed loading={loading} />,
           hint: t("historicalPortfolio.portfolioQarGainNote"),

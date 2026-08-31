@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { getToken, setToken, login as apiLogin, logout as apiLogout, getCurrentUser } from "./api";
+import { getToken, login as apiLogin, logout as apiLogout, getCurrentUser } from "./api";
+import { AppBootSplash } from "@/components/layout/AppBootSplash";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -68,11 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground font-mono">Loading...</p>
-      </div>
-    );
+    return <AppBootSplash />;
   }
 
   return (

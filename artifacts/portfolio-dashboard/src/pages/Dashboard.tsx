@@ -5,10 +5,13 @@ import { Shell } from "@/components/layout/Shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, PageHeader } from "@/components/phase1/PageHeader";
 import { AnimatedNumber } from "@/components/phase1/AnimatedNumber";
-import { QuoteBoard, quoteLogoLabel, sparkFromRange } from "@/components/phase1/QuoteBoard";
+import { QuoteBoard, quoteLogoLabel } from "@/components/phase1/QuoteBoard";
 import { StatsSummaryBar } from "@/components/phase1/StatsSummaryBar";
 import {
-  getDashboardMetrics, getAumTrajectory, getSectors, getStocks, getCustomers, getPortfolioManager,
+  extClientDisplayName,
+  getSqlFirmOverview,
+  getStockMovers,
+  type SqlFirmOverview,
 } from "@/lib/api";
 import {
   Area,
@@ -17,6 +20,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -25,11 +29,52 @@ import {
   YAxis,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SECTOR_ENTER = ["#18a270", "#11a3b0", "#1f58e9"];
-const SECTOR_AVOID = ["#e24b57", "#e98921"];
+const MIX_COLORS = { equity: "var(--shell-blue)", cash: "#18a270" };
+/** Single brand scale (lighter = smaller client) — follows Display settings main color. */
+const TOP_BAR_BLUE = [
+  "var(--shell-blue)",
+  "color-mix(in srgb, var(--shell-blue) 88%, white)",
+  "color-mix(in srgb, var(--shell-blue) 76%, white)",
+  "color-mix(in srgb, var(--shell-blue) 64%, white)",
+  "color-mix(in srgb, var(--shell-blue) 52%, white)",
+  "color-mix(in srgb, var(--shell-blue) 42%, white)",
+  "color-mix(in srgb, var(--shell-blue) 34%, white)",
+  "color-mix(in srgb, var(--shell-blue) 28%, white)",
+];
+
+/** Soften ALL-CAPS Latin names for chart labels; leave Arabic/mixed alone. */
+function displayClientName(raw: string): string {
+  const name = raw.trim();
+  if (!name || /[\u0600-\u06FF]/.test(name)) return name;
+  if (/[a-z]/.test(name) || !/[A-Z]/.test(name)) return name;
+  return name
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (ch) => ch.toUpperCase())
+    .replace(/\b([A-Z])\./g, (m) => m.toUpperCase());
+}
+
+function shortChartLabel(raw: string, max = 16): string {
+  const name = displayClientName(raw);
+  if (name.length <= max) return name;
+  return `${name.slice(0, Math.max(1, max - 1))}…`;
+}
+
+/** Avoid flat series collapsing Y ticks to the same label (e.g. 137.3M × N). */
+function paddedDomain(values: number[]): [number, number] {
+  if (!values.length) return [0, 1];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+  if (max === min) {
+    const pad = Math.max(Math.abs(max) * 0.02, 50_000);
+    return [min - pad, max + pad];
+  }
+  const span = max - min;
+  return [min - span * 0.14, max + span * 0.2];
+}
 
 function useDashboardLocale() {
   const { t, i18n } = useTranslation();
@@ -49,7 +94,7 @@ function useDashboardLocale() {
     return d.toLocaleDateString(dateLocale, { day: "2-digit", month: "short" });
   };
 
-  return { t, formatQar, formatCompact, formatTickDate, numberLocale, dateLocale };
+  return { t, i18n, formatQar, formatCompact, formatTickDate, numberLocale, dateLocale };
 }
 
 function ChartCard({
@@ -71,13 +116,14 @@ function ChartCard({
     <section
       className={cn(
         "overflow-hidden rounded-[22px] border border-white/95 bg-[linear-gradient(160deg,#ffffff_0%,#f5f8ff_55%,#eef3fc_100%)] shadow-[0_14px_32px_rgba(57,82,143,0.10),inset_1px_1px_0_#fff]",
+        "dark:border-white/10 dark:bg-[linear-gradient(160deg,#1a2438_0%,#151e32_55%,#121a2c_100%)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.35),inset_1px_1px_0_rgba(255,255,255,0.04)]",
         className,
       )}
     >
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e4ebf8] px-5 py-4">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e4ebf8] px-5 py-4 dark:border-white/10">
         <div className="min-w-0">
-          <h3 className="text-[15px] font-extrabold tracking-tight text-[#0e1837]">{title}</h3>
-          {subtitle ? <p className="mt-1 text-[12.5px] text-[#53678f]">{subtitle}</p> : null}
+          <h3 className="text-[15px] font-extrabold tracking-tight text-[#0e1837] dark:text-[var(--color-text-primary)]">{title}</h3>
+          {subtitle ? <p className="mt-1 text-[12.5px] text-[#53678f] dark:text-[var(--color-text-secondary)]">{subtitle}</p> : null}
         </div>
         {action}
       </header>
@@ -86,272 +132,491 @@ function ChartCard({
   );
 }
 
-function AumTooltip({
+function MoneyTooltip({
   active,
   payload,
   label,
   formatQar,
   formatTickDate,
   emptyLabel,
+  valueKey = "value",
 }: {
   active?: boolean;
-  payload?: Array<{ value?: number }>;
+  payload?: Array<{ value?: number; payload?: Record<string, number | string> }>;
   label?: string;
   formatQar: (val: number) => string;
   formatTickDate: (value: string) => string;
   emptyLabel: string;
+  valueKey?: string;
 }) {
   if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  const value = Number(row?.[valueKey] ?? payload[0]?.value ?? 0);
   return (
-    <div className="rounded-xl border border-[#dce4f6] bg-white/95 px-3 py-2 shadow-[0_12px_28px_rgba(57,82,143,0.16)] backdrop-blur-sm">
-      <p className="text-[11px] font-semibold text-[#53678f]">{label ? formatTickDate(label) : emptyLabel}</p>
-      <p className="mt-0.5 font-data text-sm font-bold text-[#0e1837]">{formatQar(Number(payload[0]?.value || 0))}</p>
+    <div className="rounded-xl border border-[#dce4f6] bg-white/95 px-3 py-2 shadow-[0_12px_28px_rgba(57,82,143,0.16)] backdrop-blur-sm dark:border-white/10 dark:bg-[#1a2438]/95">
+      <p className="text-[11px] font-semibold text-[#53678f] dark:text-[var(--color-text-secondary)]">{label ? formatTickDate(label) : emptyLabel}</p>
+      <p className="mt-0.5 font-data text-sm font-bold text-[#0e1837] dark:text-[var(--color-text-primary)]">{formatQar(value)}</p>
     </div>
   );
 }
 
-function SectorTooltip({
+function TrajectoryTooltip({
   active,
   payload,
+  label,
+  formatQar,
+  formatTickDate,
+  pvLabel,
+  cashLabel,
 }: {
   active?: boolean;
-  payload?: Array<{ payload?: { name: string; score: number; kind: string; fill: string } }>;
+  payload?: Array<{ dataKey?: string; value?: number; color?: string }>;
+  label?: string;
+  formatQar: (val: number) => string;
+  formatTickDate: (value: string) => string;
+  pvLabel: string;
+  cashLabel: string;
 }) {
-  if (!active || !payload?.[0]?.payload) return null;
-  const row = payload[0].payload;
+  if (!active || !payload?.length || !label) return null;
+  const pv = payload.find((p) => p.dataKey === "value");
+  const cash = payload.find((p) => p.dataKey === "cash");
   return (
-    <div className="rounded-xl border border-[#dce4f6] bg-white/95 px-3 py-2 shadow-[0_12px_28px_rgba(57,82,143,0.16)] backdrop-blur-sm">
-      <p className="text-[11px] font-semibold text-[#53678f]">{row.name}</p>
-      <p className="mt-0.5 text-sm font-bold text-[#0e1837]">
-        {row.kind} · <span className="font-data">{row.score.toFixed(0)}</span>
-      </p>
+    <div className="min-w-[168px] rounded-xl border border-[#dce4f6] bg-white/95 px-3.5 py-2.5 shadow-[0_14px_32px_rgba(57,82,143,0.18)] backdrop-blur-sm dark:border-white/10 dark:bg-[#1a2438]/95">
+      <p className="text-[11px] font-semibold tracking-wide text-[#53678f] dark:text-[var(--color-text-secondary)]">{formatTickDate(label)}</p>
+      {pv ? (
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#24365c] dark:text-[var(--color-text-secondary)]">
+            <i className="size-1.5 rounded-full bg-[var(--shell-blue)]" />
+            {pvLabel}
+          </span>
+          <bdi className="font-data text-[12.5px] font-extrabold text-[#0e1837] dark:text-[var(--color-text-primary)]" dir="ltr">
+            {formatQar(Number(pv.value || 0))}
+          </bdi>
+        </div>
+      ) : null}
+      {cash ? (
+        <div className="mt-1.5 flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#24365c] dark:text-[var(--color-text-secondary)]">
+            <i className="size-1.5 rounded-full bg-[#18a270]" />
+            {cashLabel}
+          </span>
+          <bdi className="font-data text-[12.5px] font-extrabold text-[#0e1837] dark:text-[var(--color-text-primary)]" dir="ltr">
+            {formatQar(Number(cash.value || 0))}
+          </bdi>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function TopClientBarTooltip({
+  active,
+  payload,
+  formatQar,
+  shareLabel,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: { fullName?: string; value?: number; sharePct?: number | null } }>;
+  formatQar: (val: number) => string;
+  shareLabel: (pct: string) => string;
+}) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  if (!row) return null;
+  return (
+    <div className="max-w-[260px] rounded-xl border border-[#dce4f6] bg-white/95 px-3 py-2 shadow-[0_12px_28px_rgba(57,82,143,0.16)] backdrop-blur-sm dark:border-white/10 dark:bg-[#1a2438]/95">
+      <p className="text-[12px] font-bold leading-snug text-[#0e1837] dark:text-[var(--color-text-primary)]">{row.fullName}</p>
+      <p className="mt-1 font-data text-sm font-extrabold text-[var(--shell-blue)]">{formatQar(Number(row.value || 0))}</p>
+      {row.sharePct != null ? (
+        <p className="mt-0.5 text-[11px] font-semibold text-[#53678f]">{shareLabel(row.sharePct.toFixed(1))}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function TopClientYTick({
+  x,
+  y,
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+}) {
+  const label = String(payload?.value ?? "");
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={4}
+      textAnchor="end"
+      fill="#53678f"
+      fontSize={11}
+      fontWeight={600}
+    >
+      <title>{label}</title>
+      {label}
+    </text>
   );
 }
 
 const ghostLink =
-  "inline-flex h-9 items-center justify-center rounded-[12px] border border-[#dfe6f6] bg-[linear-gradient(145deg,#fff,#eef3fd)] px-3.5 text-[12.5px] font-bold text-[#203c72] no-underline shadow-[0_6px_14px_rgba(57,82,143,0.08)] transition hover:-translate-y-px hover:text-[#1760f3]";
+  "inline-flex h-9 items-center justify-center rounded-[12px] border border-[#dfe6f6] bg-[linear-gradient(145deg,#fff,#eef3fd)] px-3.5 text-[12.5px] font-bold text-[#203c72] no-underline shadow-[0_6px_14px_rgba(57,82,143,0.08)] transition hover:-translate-y-px hover:text-[var(--shell-blue)] dark:border-white/10 dark:bg-[linear-gradient(145deg,#1a2438,#151e32)] dark:text-[var(--color-text-primary)]";
+
+function emptyOverview(): SqlFirmOverview {
+  return {
+    source: "sql",
+    configured: true,
+    asOf: null,
+    qscDates: [],
+    metrics: {
+      totalPortfolioValue: 0,
+      totalSystemCash: 0,
+      totalNavDisplay: 0,
+      activeClients: 0,
+      avgPortfolioSize: 0,
+      clientsWithShares: 0,
+      clientsCashOnly: 0,
+      ledgerClients: 0,
+      shareTxRows: 0,
+      cashTxRows: 0,
+      pvDelta: null,
+      pvDeltaPct: null,
+      cashDelta: null,
+    },
+    trajectory: [],
+    topClients: [],
+    mix: { equity: 0, cash: 0 },
+    indices: { dsm: null, qeri: null },
+  };
+}
 
 export default function Dashboard() {
-  const { t, formatQar, formatCompact, formatTickDate } = useDashboardLocale();
-  const { data: metrics, isLoading: metricsLoading } = useQuery({ queryKey: ["dashboard"], queryFn: getDashboardMetrics });
-  const { data: trajectory, isLoading: trajectoryLoading } = useQuery({ queryKey: ["aumTrajectory"], queryFn: getAumTrajectory });
-  const { data: sectors, isLoading: sectorsLoading } = useQuery({ queryKey: ["sectors"], queryFn: getSectors });
-  const { data: stocks, isLoading: stocksLoading } = useQuery({ queryKey: ["stocks"], queryFn: getStocks });
-  const { data: customers, isLoading: customersLoading } = useQuery({ queryKey: ["customers"], queryFn: getCustomers });
-  const { data: manager = [] } = useQuery({ queryKey: ["portfolio-manager"], queryFn: () => getPortfolioManager() });
+  const { t, i18n, formatQar, formatCompact, formatTickDate } = useDashboardLocale();
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    isError: overviewError,
+    error: overviewErr,
+  } = useQuery({
+    queryKey: ["dashboard-sql"],
+    queryFn: () => getSqlFirmOverview(),
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const {
+    data: movers,
+    isLoading: stocksLoading,
+    isError: stocksError,
+  } = useQuery({
+    queryKey: ["stock-movers", 5],
+    queryFn: () => getStockMovers(5),
+    staleTime: 60_000,
+    retry: 1,
+  });
 
-  const topSectors = (sectors || []).filter((s) => s.signal === "enter").slice(0, 3);
-  const bottomSectors = (sectors || []).filter((s) => s.signal === "avoid").slice(0, 2);
-  const sectorRows = [
-    ...topSectors.map((s, i) => ({
-      id: s.id,
-      name: s.sector || s.name,
-      score: Math.max(0, Number(s.score || 0)),
-      fill: SECTOR_ENTER[i % SECTOR_ENTER.length],
-      kind: "Enter" as const,
-    })),
-    ...bottomSectors.map((s, i) => ({
-      id: s.id,
-      name: s.sector || s.name,
-      score: Math.max(0, Number(s.score || 0)),
-      fill: SECTOR_AVOID[i % SECTOR_AVOID.length],
-      kind: "Avoid" as const,
-    })),
-  ];
-  const sectorMix = [
-    { name: "Enter", value: topSectors.length, fill: "#18a270" },
-    { name: "Avoid", value: bottomSectors.length, fill: "#e24b57" },
-  ].filter((d) => d.value > 0);
-  const firmTrend = (trajectory || []).map((d) => ({ date: d.date, value: d.value }));
-  const m = metrics || { totalAum: 0, activeClients: 0, avgPortfolioSize: 0, dailyPnL: 0, dailyPnLPct: 0 };
-  const openRisk = manager.reduce((sum, row) => sum + row.openRiskAlerts, 0);
-  const pendingRb = manager.filter((row) => row.pendingRebalance).length;
-  const topClients = [...(customers || [])].sort((a, b) => b.currentValue - a.currentValue).slice(0, 5);
-  const marketNames = (stocks || []).slice(0, 5);
-  const aumDelta =
-    firmTrend.length >= 2
-      ? ((firmTrend[firmTrend.length - 1].value - firmTrend[0].value) / Math.max(1, firmTrend[0].value)) * 100
+  const o = overview || emptyOverview();
+  const m = o.metrics;
+  const firmTrend = o.trajectory.map((d) => ({
+    date: d.date,
+    value: d.portfolioValue,
+    cash: d.systemCash,
+    nav: d.navDisplay,
+  }));
+  const trendYDomain = paddedDomain(firmTrend.flatMap((d) => [d.value, d.cash]));
+  const trendStart = firmTrend[0];
+  const trendEnd = firmTrend[firmTrend.length - 1];
+  const mixRows = [
+    { name: t("dashboard.mixEquity"), value: Math.max(0, m.totalPortfolioValue), fill: MIX_COLORS.equity },
+    { name: t("dashboard.mixCash"), value: Math.max(0, m.totalSystemCash), fill: MIX_COLORS.cash },
+  ].filter((r) => r.value > 0);
+  const topBars = o.topClients.map((c, i) => {
+    const fullName = displayClientName(
+      extClientDisplayName(c, i18n.language) || String(c.clientId),
+    );
+    return {
+      id: String(c.clientId),
+      name: shortChartLabel(fullName, 16),
+      fullName,
+      value: c.portfolioValue,
+      sharePct: m.totalPortfolioValue > 0 ? (c.portfolioValue / m.totalPortfolioValue) * 100 : null,
+      fill: TOP_BAR_BLUE[i % TOP_BAR_BLUE.length],
+    };
+  });
+  const topBarsHeight = Math.max(260, topBars.length * 36 + 28);
+  const moversFallback = movers || [];
+  const dsm = o.indices.dsm;
+  const sqlError =
+    overviewError
+      ? ((overviewErr as Error)?.message || t("dashboard.sqlUnavailableDesc"))
       : null;
-
-  const pnlPctLabel = `${m.dailyPnLPct >= 0 ? "+" : ""}${m.dailyPnLPct.toFixed(2)}`;
+  const pvDeltaLabel =
+    m.pvDeltaPct == null
+      ? null
+      : `${m.pvDeltaPct >= 0 ? "+" : ""}${m.pvDeltaPct.toFixed(2)}`;
 
   return (
     <Shell>
-      <div className=" p-4 pt-8 space-y-6">
+      <div className="space-y-6 p-4 pt-8">
         <PageHeader
           className="mb-0 border-b-0 pb-0"
           title={t("dashboard.title")}
-          description={t("dashboard.description")}
-          titleClassName="text-[clamp(1.75rem,3vw,2.4rem)] font-extrabold leading-none tracking-[-0.035em] text-[#0e1837]"
-          descriptionClassName="mt-3 max-w-2xl text-[15px] text-[#53678f]"
+          description={t("dashboard.descriptionSql")}
+          titleClassName="text-[clamp(1.75rem,3vw,2.4rem)] font-extrabold leading-none tracking-[-0.035em] text-[#0e1837] dark:text-[var(--color-text-primary)]"
+          descriptionClassName="mt-3 max-w-2xl text-[15px] text-[#53678f] dark:text-[var(--color-text-secondary)]"
+          actions={
+            o.asOf ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#dfe6f6] bg-white px-3 py-1.5 text-[12px] font-bold text-[#203c72] shadow-[0_6px_14px_rgba(57,82,143,0.08)] dark:border-white/10 dark:bg-[#1a2438] dark:text-[var(--color-text-primary)]">
+                <Database className="size-3.5 text-[var(--shell-blue)]" />
+                {t("dashboard.sqlAsOf", { asOf: o.asOf })}
+              </span>
+            ) : null
+          }
         />
+
+        {sqlError ? (
+          <EmptyState
+            icon={<Database className="h-10 w-10" />}
+            title={t("dashboard.sqlUnavailableTitle")}
+            description={sqlError}
+            action={
+              <Link href="/balances" className={ghostLink}>
+                {t("dashboard.openBalances")}
+              </Link>
+            }
+          />
+        ) : null}
 
         <StatsSummaryBar
           ariaLabel={t("dashboard.firmOverview")}
-          loading={metricsLoading}
-          className="mt-6"
+          loading={overviewLoading}
+          className="mt-2"
           iconSize={72}
           items={[
             {
-              id: "aum",
+              id: "pv",
               icon: "/Total AUM.png",
-              label: t("dashboard.totalAum"),
-              value: <AnimatedNumber value={m.totalAum} format="compactCurrency" />,
-              hint: t("dashboard.acrossAccounts"),
+              label: t("dashboard.qscPortfolioValue"),
+              value: <AnimatedNumber value={m.totalPortfolioValue} format="compactCurrency" />,
+              hint: t("dashboard.qscPortfolioValueNote"),
             },
             {
-              id: "pnl",
+              id: "delta",
               icon: "/Daily P&L.png",
-              label: t("dashboard.dailyPnl"),
+              label: t("dashboard.pvChange"),
               value: (
                 <AnimatedNumber
-                  value={Math.abs(m.dailyPnL)}
+                  value={m.pvDelta == null ? null : Math.abs(m.pvDelta)}
                   format="compactCurrency"
-                  prefix={m.dailyPnL >= 0 ? "↗ " : "↘ "}
+                  signed={false}
+                  prefix={m.pvDelta != null && m.pvDelta >= 0 ? "↗ " : m.pvDelta != null ? "↘ " : ""}
                 />
               ),
-              hint: metricsLoading
-                ? t("dashboard.markedVsPrior")
-                : t("dashboard.vsPriorClose", { pct: pnlPctLabel }),
-              valueClassName: m.dailyPnL >= 0 ? "text-[var(--color-positive)]" : "text-loss",
+              hint:
+                overviewLoading || pvDeltaLabel == null
+                  ? t("dashboard.vsPriorSnapshot")
+                  : t("dashboard.vsPriorSnapshotPct", { pct: pvDeltaLabel }),
+              valueClassName:
+                m.pvDelta == null ? undefined : m.pvDelta >= 0 ? "text-[var(--color-positive)]" : "text-loss",
             },
             {
-              id: "portfolios",
+              id: "clients",
               icon: "/Active portfolios.png",
               label: t("dashboard.activePortfolios"),
               value: <AnimatedNumber value={m.activeClients} format="integer" />,
-              hint: t("dashboard.clientsCount", { count: (customers || []).length }),
+              hint: t("dashboard.clientsLedgerHint", {
+                ledger: m.ledgerClients,
+                shares: m.clientsWithShares,
+              }),
             },
             {
-              id: "avg",
-              icon: "/Avg portfolio.png",
-              label: t("dashboard.avgPortfolio"),
-              value: <AnimatedNumber value={m.avgPortfolioSize} format="compactCurrency" />,
-              hint: t("dashboard.meanAccountSize"),
+              id: "cash",
+              icon: "/Cash-2.png",
+              label: t("dashboard.systemCash"),
+              value: <AnimatedNumber value={m.totalSystemCash} format="compactCurrency" />,
+              hint: t("dashboard.systemCashNote"),
             },
           ]}
         />
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
           <ChartCard
             title={t("dashboard.aumTrajectory")}
-            subtitle={t("dashboard.aumTrajectorySub")}
+            subtitle={t("dashboard.aumTrajectorySqlSub")}
             action={
-              aumDelta == null ? null : (
+              m.pvDeltaPct == null ? null : (
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold",
-                    aumDelta >= 0 ? "bg-[#edfff8] text-[#139366]" : "bg-[#fff0f1] text-[#e24b57]",
+                    m.pvDeltaPct >= 0
+                      ? "bg-[#edfff8] text-[#139366] dark:bg-[rgba(61,207,142,0.16)] dark:text-[var(--color-positive)]"
+                      : "bg-[#fff0f1] text-[#e24b57] dark:bg-[rgba(240,113,88,0.16)] dark:text-[var(--color-negative)]",
                   )}
                 >
-                  <ArrowUpRight className={cn("size-3.5", aumDelta < 0 && "rotate-90")} />
+                  <ArrowUpRight className={cn("size-3.5", (m.pvDeltaPct ?? 0) < 0 && "rotate-90")} />
                   {t("dashboard.seriesPct", {
-                    pct: `${aumDelta >= 0 ? "+" : ""}${aumDelta.toFixed(1)}`,
+                    pct: `${m.pvDeltaPct >= 0 ? "+" : ""}${m.pvDeltaPct.toFixed(1)}`,
                   })}
                 </span>
               )
             }
+            bodyClassName="pt-3"
           >
-            <div className="h-[300px]">
-              {trajectoryLoading ? (
-                <div className="flex h-full items-end gap-2 px-1">
-                  {[40, 65, 50, 80, 60, 90, 70, 100, 85, 95].map((h, i) => (
-                    <Skeleton key={i} className="flex-1 rounded-t-md" style={{ height: `${h}%`, animationDelay: `${i * 40}ms` }} />
-                  ))}
-                </div>
-              ) : firmTrend.length === 0 ? (
-                <EmptyState title={t("dashboard.emptyAumTitle")} description={t("dashboard.emptyAumDesc")} />
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={firmTrend} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="dash-aum-fill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1760f3" stopOpacity={0.32} />
-                        <stop offset="55%" stopColor="#13c5ed" stopOpacity={0.12} />
-                        <stop offset="100%" stopColor="#13c5ed" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="dash-aum-stroke" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#13c5ed" />
-                        <stop offset="100%" stopColor="#1760f3" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 6" stroke="rgba(119,141,198,0.22)" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={formatTickDate}
-                      minTickGap={36}
-                      tick={{ fill: "#7a879c", fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tickFormatter={(v) => formatCompact(Number(v))}
-                      width={44}
-                      tick={{ fill: "#7a879c", fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      domain={["auto", "auto"]}
-                    />
-                    <Tooltip
-                      content={
-                        <AumTooltip
-                          formatQar={formatQar}
-                          formatTickDate={formatTickDate}
-                          emptyLabel={t("common.na")}
-                        />
-                      }
-                      cursor={{ stroke: "#1760f3", strokeDasharray: "4 4", strokeOpacity: 0.35 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke="url(#dash-aum-stroke)"
-                      strokeWidth={2.75}
-                      fill="url(#dash-aum-fill)"
-                      dot={false}
-                      activeDot={{ r: 5, strokeWidth: 2, fill: "#fff", stroke: "#1760f3" }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
+            <div className="relative overflow-hidden rounded-2xl border border-[#e4ebf8] bg-[radial-gradient(120%_80%_at_10%_0%,#eef4ff_0%,#f8faff_42%,#ffffff_100%)] p-3 sm:p-4 dark:border-white/10 dark:bg-[radial-gradient(120%_80%_at_10%_0%,rgba(44,98,232,0.16)_0%,#151e32_42%,#121a2c_100%)]">
+              <div
+                className="pointer-events-none absolute inset-x-8 top-6 h-24 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(23,96,243,0.12),transparent_70%)] blur-2xl"
+                aria-hidden
+              />
+              <div className="relative h-[320px]">
+                {overviewLoading ? (
+                  <div className="flex h-full items-end gap-2 px-1">
+                    {[40, 65, 50, 80, 60, 90, 70, 100, 85, 95].map((h, i) => (
+                      <Skeleton key={i} className="flex-1 rounded-t-md" style={{ height: `${h}%`, animationDelay: `${i * 40}ms` }} />
+                    ))}
+                  </div>
+                ) : firmTrend.length === 0 ? (
+                  <EmptyState title={t("dashboard.emptyAumTitle")} description={t("dashboard.emptyAumSqlDesc")} />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={firmTrend} margin={{ top: 16, right: 12, left: 4, bottom: 4 }}>
+                      <defs>
+                        <linearGradient id="dash-sql-fill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--shell-blue)" stopOpacity={0.38} />
+                          <stop offset="45%" stopColor="var(--shell-blue)" stopOpacity={0.16} />
+                          <stop offset="100%" stopColor="var(--shell-accent)" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="dash-sql-stroke" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="var(--shell-accent)" />
+                          <stop offset="55%" stopColor="var(--shell-blue)" />
+                          <stop offset="100%" stopColor="var(--shell-blue)" />
+                        </linearGradient>
+                        <filter id="dash-sql-glow" x="-20%" y="-40%" width="140%" height="180%">
+                          <feGaussianBlur stdDeviation="2.2" result="blur" />
+                          <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      <CartesianGrid strokeDasharray="2 8" stroke="rgba(119,141,198,0.2)" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={formatTickDate}
+                        minTickGap={36}
+                        tick={{ fill: "#7a879c", fontSize: 11, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={6}
+                      />
+                      <YAxis
+                        tickFormatter={(v) => formatCompact(Number(v))}
+                        width={52}
+                        tickCount={5}
+                        tick={{ fill: "#8a97ad", fontSize: 10.5 }}
+                        axisLine={false}
+                        tickLine={false}
+                        domain={trendYDomain}
+                        allowDataOverflow
+                      />
+                      <Tooltip
+                        content={
+                          <TrajectoryTooltip
+                            formatQar={formatQar}
+                            formatTickDate={formatTickDate}
+                            pvLabel={t("dashboard.mixEquity")}
+                            cashLabel={t("dashboard.mixCash")}
+                          />
+                        }
+                        cursor={{ stroke: "var(--shell-blue)", strokeDasharray: "4 4", strokeOpacity: 0.4 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        name={t("dashboard.mixEquity")}
+                        stroke="url(#dash-sql-stroke)"
+                        strokeWidth={3}
+                        fill="url(#dash-sql-fill)"
+                        filter="url(#dash-sql-glow)"
+                        dot={
+                          firmTrend.length <= 6
+                            ? { r: 4.5, fill: "#fff", stroke: "var(--shell-blue)", strokeWidth: 2.5 }
+                            : false
+                        }
+                        activeDot={{ r: 6, strokeWidth: 2.5, fill: "#fff", stroke: "var(--shell-blue)" }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="cash"
+                        name={t("dashboard.mixCash")}
+                        stroke="#18a270"
+                        strokeWidth={2}
+                        strokeDasharray="5 4"
+                        dot={false}
+                        activeDot={{ r: 4, strokeWidth: 2, fill: "#fff", stroke: "#18a270" }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
             </div>
+            {!overviewLoading && trendStart && trendEnd ? (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { label: t("dashboard.trajStart"), value: formatCompact(trendStart.value) },
+                  { label: t("dashboard.trajEnd"), value: formatCompact(trendEnd.value) },
+                  { label: t("dashboard.mixCash"), value: formatCompact(trendEnd.cash) },
+                  {
+                    label: t("dashboard.trajPoints"),
+                    value: String(firmTrend.length),
+                  },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-xl border border-[#e6ecf7] bg-white/80 px-3 py-2 dark:border-white/10 dark:bg-white/5"
+                  >
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#7a879c] dark:text-[var(--color-text-muted)]">
+                      {stat.label}
+                    </p>
+                    <p className="mt-0.5 font-data text-[13.5px] font-extrabold text-[#0e1837] dark:text-[var(--color-text-primary)]">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </ChartCard>
 
           <ChartCard
-            title={t("dashboard.sectorAlpha")}
-            subtitle={t("dashboard.sectorAlphaSub")}
-            action={<Link href="/sectors" className={ghostLink}>{t("dashboard.openSectors")}</Link>}
+            title={t("dashboard.bookMix")}
+            subtitle={t("dashboard.bookMixSub")}
+            action={<Link href="/balances" className={ghostLink}>{t("dashboard.openBalances")}</Link>}
           >
-            {sectorsLoading ? (
+            {overviewLoading ? (
               <div className="space-y-3 py-2">
-                <Skeleton className="mx-auto size-36 rounded-full" />
-                <Skeleton className="h-8 w-full rounded-xl" />
+                <Skeleton className="mx-auto size-28 rounded-full" />
                 <Skeleton className="h-8 w-full rounded-xl" />
               </div>
-            ) : sectorRows.length === 0 ? (
-              <EmptyState title={t("dashboard.emptySectorsTitle")} description={t("dashboard.emptySectorsDesc")} />
+            ) : mixRows.length === 0 ? (
+              <EmptyState title={t("dashboard.emptyMixTitle")} description={t("dashboard.emptyMixDesc")} />
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                <div className="relative mx-auto h-[150px] w-full max-w-[200px]">
+              <div className="grid grid-cols-1 gap-3">
+                <div className="relative mx-auto h-[140px] w-full max-w-[168px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={sectorMix}
+                        data={mixRows}
                         dataKey="value"
                         nameKey="name"
-                        innerRadius={46}
-                        outerRadius={68}
+                        innerRadius={42}
+                        outerRadius={62}
                         paddingAngle={3}
                         stroke="#fff"
                         strokeWidth={3}
                       >
-                        {sectorMix.map((entry) => (
+                        {mixRows.map((entry) => (
                           <Cell key={entry.name} fill={entry.fill} />
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value: number, name: string) => [`${value} ${t("dashboard.signals")}`, name]}
+                        formatter={(value: number, name: string) => [formatQar(Number(value)), name]}
                         contentStyle={{
                           borderRadius: 12,
                           border: "1px solid #dce4f6",
@@ -361,42 +626,194 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-data text-xl font-extrabold text-[#0e1837]">{sectorRows.length}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#7a879c]">{t("dashboard.signals")}</span>
+                    <span className="font-data text-base font-extrabold text-[#0e1837]">
+                      {formatCompact(m.totalNavDisplay)}
+                    </span>
+                    <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#7a879c]">
+                      {t("dashboard.navDisplay")}
+                    </span>
                   </div>
                 </div>
-
-                <div className="h-[180px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={sectorRows} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 6" stroke="rgba(119,141,198,0.18)" horizontal={false} />
-                      <XAxis type="number" domain={[0, 100]} hide />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        width={88}
-                        tick={{ fill: "#53678f", fontSize: 11, fontWeight: 600 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip content={<SectorTooltip />} cursor={{ fill: "rgba(23,96,243,0.06)" }} />
-                      <Bar dataKey="score" radius={[0, 10, 10, 0]} barSize={14}>
-                        {sectorRows.map((row) => (
-                          <Cell key={row.id || row.name} fill={row.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <ul className="space-y-1.5">
+                  {mixRows.map((row) => (
+                    <li
+                      key={row.name}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-[#e6ecf7] bg-white/80 px-2.5 py-2 dark:border-white/10 dark:bg-white/5"
+                    >
+                      <span className="flex min-w-0 items-center gap-1.5 text-[12px] font-semibold text-[#24365c]">
+                        <i className="inline-block size-2 shrink-0 rounded-full" style={{ background: row.fill }} />
+                        <span className="truncate">{row.name}</span>
+                      </span>
+                      <bdi className="shrink-0 font-data text-[11.5px] font-extrabold text-[#0e1837]" dir="ltr">
+                        {formatCompact(row.value)}
+                      </bdi>
+                    </li>
+                  ))}
+                  <li className="flex items-center justify-between px-1 pt-1 text-[11.5px] text-[#53678f]">
+                    <span className="truncate">{t("dashboard.cashOnlyClients")}</span>
+                    <span className="font-data font-bold text-[#0e1837]">{m.clientsCashOnly}</span>
+                  </li>
+                </ul>
               </div>
             )}
           </ChartCard>
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <ChartCard
+            title={t("dashboard.topSqlClients")}
+            subtitle={t("dashboard.topSqlClientsSub")}
+            action={<Link href="/customers" className={ghostLink}>{t("dashboard.allClients")}</Link>}
+          >
+            <div style={{ height: topBarsHeight }}>
+              {overviewLoading ? (
+                <div className="space-y-2 py-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-8 w-full rounded-xl" />
+                  ))}
+                </div>
+              ) : topBars.length === 0 ? (
+                <EmptyState title={t("dashboard.emptyClientsTitle")} description={t("dashboard.emptyClientsSqlDesc")} />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={topBars}
+                    layout="vertical"
+                    margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+                    barCategoryGap="28%"
+                  >
+                    <CartesianGrid strokeDasharray="3 6" stroke="rgba(119,141,198,0.18)" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(v) => formatCompact(Number(v))}
+                      tick={{ fill: "#7a879c", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={118}
+                      interval={0}
+                      tick={<TopClientYTick />}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      content={
+                        <TopClientBarTooltip
+                          formatQar={formatQar}
+                          shareLabel={(pct) => t("dashboard.firmShare", { pct })}
+                        />
+                      }
+                      cursor={{ fill: "rgba(23,96,243,0.06)" }}
+                    />
+                    <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={16} isAnimationActive>
+                      {topBars.map((row) => (
+                        <Cell key={row.id} fill={row.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </ChartCard>
+
+          <ChartCard
+            title={t("dashboard.indexPulse")}
+            subtitle={t("dashboard.indexPulseSub")}
+            action={<Link href="/indices" className={ghostLink}>{t("dashboard.openIndices")}</Link>}
+          >
+            <div className="h-[260px]">
+              {overviewLoading ? (
+                <Skeleton className="h-full w-full rounded-xl" />
+              ) : !dsm?.series?.length ? (
+                <EmptyState title={t("dashboard.emptyIndexTitle")} description={t("dashboard.emptyIndexDesc")} />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dsm.series} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="dash-dsm-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#18a270" stopOpacity={0.28} />
+                        <stop offset="100%" stopColor="#18a270" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 6" stroke="rgba(119,141,198,0.22)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={formatTickDate}
+                      minTickGap={40}
+                      tick={{ fill: "#7a879c", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={["auto", "auto"]}
+                      tickFormatter={(v) => formatCompact(Number(v))}
+                      width={44}
+                      tick={{ fill: "#7a879c", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      content={
+                        <MoneyTooltip
+                          formatQar={(v) =>
+                            new Intl.NumberFormat(i18n.language?.startsWith("ar") ? "ar-QA" : "en-QA", {
+                              maximumFractionDigits: 2,
+                            }).format(v)
+                          }
+                          formatTickDate={formatTickDate}
+                          emptyLabel={t("common.na")}
+                        />
+                      }
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#18a270"
+                      strokeWidth={2.5}
+                      fill="url(#dash-dsm-fill)"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 2, fill: "#fff", stroke: "#18a270" }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            {dsm ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[#e6ecf7] pt-3 text-[12.5px]">
+                <span className="font-bold text-[#24365c]">{dsm.name}</span>
+                <bdi className="font-data font-extrabold text-[#0e1837]" dir="ltr">
+                  {dsm.last.toLocaleString(i18n.language?.startsWith("ar") ? "ar-QA" : "en-QA", {
+                    maximumFractionDigits: 2,
+                  })}
+                </bdi>
+                {dsm.changePct != null ? (
+                  <span className={cn("font-extrabold", dsm.changePct >= 0 ? "text-[#139366]" : "text-[#e24b57]")}>
+                    {dsm.changePct >= 0 ? "+" : ""}
+                    {dsm.changePct.toFixed(2)}%
+                  </span>
+                ) : null}
+                {o.indices.qeri ? (
+                  <span className="ms-auto text-[#53678f]">
+                    {o.indices.qeri.name}:{" "}
+                    <bdi className="font-data font-bold text-[#0e1837]" dir="ltr">
+                      {o.indices.qeri.last.toLocaleString(i18n.language?.startsWith("ar") ? "ar-QA" : "en-QA", {
+                        maximumFractionDigits: 2,
+                      })}
+                    </bdi>
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+          </ChartCard>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           <QuoteBoard
             title={t("dashboard.keyPortfolios")}
-            subtitle={t("dashboard.topClients")}
+            subtitle={t("dashboard.topClientsSql")}
             icon="/Active portfolios.png"
             actionHref="/customers"
             actionLabel={t("dashboard.allClients")}
@@ -404,22 +821,29 @@ export default function Dashboard() {
               asset: t("dashboard.colClient"),
               trend: t("dashboard.colTrend"),
               price: t("dashboard.colValue"),
-              day: t("dashboard.colReturn"),
+              day: t("dashboard.colCash"),
             }}
-            loading={customersLoading}
+            loading={overviewLoading}
             emptyTitle={t("dashboard.emptyClientsTitle")}
-            emptyDescription={t("dashboard.emptyClientsDesc")}
+            emptyDescription={t("dashboard.emptyClientsSqlDesc")}
             paginate={false}
-            rows={topClients.map((c) => ({
-              id: c.id,
-              href: `/customers-old/${c.id}`,
-              logo: quoteLogoLabel(c.name, 2),
-              title: c.name,
-              subtitle: c.email || t("common.na"),
-              sparkline: sparkFromRange(c.totalInvested, c.currentValue),
-              price: <AnimatedNumber value={c.currentValue} format="compactCurrency" />,
+            rows={o.topClients.slice(0, 5).map((c) => ({
+              id: String(c.clientId),
+              href: `/customers/${c.clientId}`,
+              logo: quoteLogoLabel(extClientDisplayName(c, i18n.language) || String(c.clientId), 2),
+              title: extClientDisplayName(c, i18n.language) || String(c.clientId),
+              // subtitle: t("dashboard.accountId", { id: c.clientId }),
+              meta: (
+                <span className="font-data text-[11px] text-[#53678f]">
+                  {t("dashboard.cashMeta", {
+                    cash: formatCompact(c.systemCash),
+                  })}
+                </span>
+              ),
+              sparkline: [],
+              price: <AnimatedNumber value={c.portfolioValue} format="compactCurrency" />,
               priceCaption: t("common.currencyValue"),
-              dayPct: c.returnPct,
+              dayPct: null,
             }))}
           />
 
@@ -429,11 +853,11 @@ export default function Dashboard() {
             icon="/analytics.png"
             actionHref="/stocks"
             actionLabel={t("dashboard.allStocks")}
-            loading={stocksLoading}
-            emptyTitle={t("dashboard.emptyStocksTitle")}
-            emptyDescription={t("dashboard.emptyStocksDesc")}
+            loading={stocksLoading && !stocksError}
+            emptyTitle={stocksError ? t("dashboard.moversUnavailableTitle") : t("dashboard.emptyStocksTitle")}
+            emptyDescription={stocksError ? t("dashboard.moversUnavailableDesc") : t("dashboard.emptyStocksDesc")}
             paginate={false}
-            rows={marketNames.map((s) => ({
+            rows={moversFallback.map((s) => ({
               id: s.id,
               href: `/stocks/${s.id}`,
               logo: quoteLogoLabel(s.ticker),

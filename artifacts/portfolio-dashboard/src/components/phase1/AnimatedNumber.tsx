@@ -127,11 +127,12 @@ export function AnimatedNumber({
       // Observing the number itself causes a feedback loop that shrinks type to 55%.
       const avail = column?.clientWidth ?? root.clientWidth;
       const need = probe.scrollWidth;
-      if (avail < 48 || need <= 0 || need <= avail) {
+      if (avail < 32 || need <= 0 || need <= avail) {
         setFit(1);
         return;
       }
-      const next = Math.min(1, Math.max(0.8, (avail - 4) / need));
+      // Floor 0.4 is safe: we measure the flex column (stable width), not this node.
+      const next = Math.min(1, Math.max(0.4, (avail - 8) / need));
       setFit((prev) => (Math.abs(prev - next) < 0.008 ? prev : next));
     };
 

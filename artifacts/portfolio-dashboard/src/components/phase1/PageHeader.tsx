@@ -64,8 +64,66 @@ export function EmptyState({
   );
 }
 
+/** Compact centered empty for chart/list cards (client holdings panels, etc.). */
+export function PanelEmptyState({
+  icon,
+  title,
+  description,
+  className,
+  hideIcon = false,
+}: {
+  icon?: ReactNode;
+  title: string;
+  description?: string;
+  className?: string;
+  /** When true, title + description only (no icon badge). */
+  hideIcon?: boolean;
+}) {
+  const showIcon = !hideIcon;
+  return (
+    <div
+      className={cn(
+        "flex h-full min-h-[10rem] w-full flex-col items-center justify-center gap-3 px-5 py-8 text-center",
+        className,
+      )}
+      role="status"
+    >
+      {showIcon ? (
+        <div
+          className="grid size-[4.25rem] place-items-center rounded-[22px] border border-[#d9e3f2] bg-[linear-gradient(160deg,#ffffff_0%,#f3f7fd_55%,#e8eef8_100%)] text-[#5f7191] shadow-[0_10px_24px_rgba(57,82,143,0.10),inset_1px_1px_0_#fff]"
+          aria-hidden
+        >
+          {icon ?? (
+            <svg viewBox="0 0 24 24" className="size-8" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M4 7.5h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11Z" />
+              <path d="M8 7.5V6a4 4 0 0 1 8 0v1.5" />
+              <path d="M4 11h16" />
+            </svg>
+          )}
+        </div>
+      ) : null}
+      <div className="max-w-[18rem]">
+        <p className="text-[14.5px] font-extrabold tracking-tight text-[#0e1837]">{title}</p>
+        {description ? (
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#687892]">{description}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function FilterBar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("filter-bar cdp-page-filters", className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        "filter-bar cdp-page-filters",
+        "[&_.control]:w-auto [&_.control]:shrink-0",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function StatTile({
