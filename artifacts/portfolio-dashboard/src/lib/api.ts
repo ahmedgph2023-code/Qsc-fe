@@ -4,10 +4,9 @@ import type {
   RealizedDetailsStatement,
   RealizedSummaryStatement,
 } from "./statement-types";
+import { getApiBase } from "./env";
 
-const API_BASE =
-  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE) ||
-  "http://localhost:5001/api";
+const API_BASE = getApiBase();
 
 let authToken: string | null = localStorage.getItem("authToken");
 

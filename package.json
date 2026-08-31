@@ -3,7 +3,7 @@
     "version": "0.0.0",
     "license": "MIT",
     "scripts": {
-        "dev": "set PORT=5173&& set BASE_PATH=/&& npm run dev -w @workspace/portfolio-dashboard",
+        "dev": "npm run dev -w @workspace/portfolio-dashboard",
         "build": "npm run typecheck && npm -ws --if-present run build",
         "typecheck:libs": "tsc --build",
         "typecheck": "npm run typecheck:libs && npm -ws --if-present run typecheck"
