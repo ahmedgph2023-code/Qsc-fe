@@ -33,9 +33,10 @@ import { TablePageFooter } from "@/components/phase1/TablePageFooter";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { IndexConstituentsDialog } from "@/components/IndexConstituentsDialog";
 import { IndexDataPointDialog, IndexExcelUploadControls } from "@/components/IndexDataPointDialog";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
 import {
-  ChevronLeft, Upload, Loader2, TrendingUp, TrendingDown,
-  Layers, PenLine, Trash2, ChevronDown, ChevronRight, Plus, Download,
+  ChevronLeft, Loader2, TrendingUp, TrendingDown,
+  Layers, PenLine, Trash2, ChevronDown, ChevronRight, Plus,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -82,7 +83,7 @@ function UploadDataDialog({ indexId, indexName, onDone }: { indexId: string; ind
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><Upload className="w-4 h-4 me-2" /> {t("common.uploadData")}</Button>
+        <Button variant="outline"><ExcelIcon className="me-2 size-4" /> {t("common.uploadData")}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
@@ -438,11 +439,11 @@ export default function IndexDetail() {
                   onClick={() => handleExport("filtered")}
                   disabled={!!exporting || !pointsPage?.pagination.total || (!dateExact && !dateFrom && !dateTo)}
                 >
-                  {exporting === "filtered" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Download className="w-4 h-4 me-2" />}
+                  {exporting === "filtered" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                   {t("common.exportExcel")}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleExport("all")} disabled={!!exporting}>
-                  {exporting === "all" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Download className="w-4 h-4 me-2" />}
+                  {exporting === "all" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                   {t("common.exportAll")}
                 </Button>
               </>

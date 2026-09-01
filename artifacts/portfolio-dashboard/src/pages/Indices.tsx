@@ -17,7 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { IndexConstituentsDialog } from "@/components/IndexConstituentsDialog";
 import { IndexExcelUploadControls } from "@/components/IndexDataPointDialog";
-import { Upload, Trash2, Layers } from "lucide-react";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
+import { Trash2, Layers } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
@@ -29,7 +30,7 @@ function UploadIndexDialog({ indices, queryClient }: { indices: IndexData[]; que
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setUploadIndexId(""); }}>
       <DialogTrigger asChild>
-        <Button variant="outline"><Upload className="w-4 h-4 me-2" /> {t("common.uploadData")}</Button>
+        <Button variant="outline"><ExcelIcon className="me-2 size-4" /> {t("common.uploadData")}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>

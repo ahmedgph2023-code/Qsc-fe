@@ -2,13 +2,15 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, FileDown, FileSpreadsheet, FileText, Inbox, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Inbox, Loader2 } from "lucide-react";
+import { ExcelIcon, FileIcon, PdfIcon } from "@/components/phase1/ExportFormatIcons";
 import { Shell } from "@/components/layout/Shell";
 import { PageHeader, EmptyState } from "@/components/phase1/PageHeader";
 import { DatePicker } from "@/components/phase1/DatePicker";
 import { DateRangePicker } from "@/components/phase1/DateRangePicker";
 import { SelectField } from "@/components/phase1/SelectField";
 import { StatementPreview, PortfolioStatementStats } from "@/components/statements/StatementPreview";
+import { StatementInvestorDialog } from "@/components/statements/StatementInvestorDialog";
 import { openStatementPrint } from "@/components/statements/statementPrintHtml";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -196,6 +198,9 @@ export default function Statements() {
         description={t("statements.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {stmt ? (
+              <StatementInvestorDialog investor={stmt.investor} dates={stmt.dates} />
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -209,7 +214,7 @@ export default function Statements() {
                 }
               }}
             >
-              <FileDown />
+              <PdfIcon className="me-2" />
               {t("statements.pdf")}
             </Button>
             <Button
@@ -229,7 +234,7 @@ export default function Statements() {
                 }
               }}
             >
-              {exporting ? <Loader2 className="animate-spin" /> : <FileSpreadsheet />}
+              {exporting ? <Loader2 className="animate-spin" /> : <ExcelIcon className="me-2" />}
               {t("statements.excel")}
             </Button>
           </div>
@@ -250,7 +255,7 @@ export default function Statements() {
         {!applied ? (
           <EmptyState
             className="py-16"
-            icon={<FileText className="h-12 w-12" />}
+            icon={<FileIcon className="h-12 w-12" />}
             title={t("statements.emptyTitle")}
             description={t("statements.emptyDesc")}
           />

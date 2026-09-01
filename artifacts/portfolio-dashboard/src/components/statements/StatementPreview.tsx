@@ -39,6 +39,12 @@ export function formatQar(value: number | null | undefined) {
   return new Intl.NumberFormat("en-QA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
+/** Portfolio statement amounts — client requested 3 decimal places (س-03). */
+export function formatStatementAmount(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return "—";
+  return new Intl.NumberFormat("en-QA", { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value);
+}
+
 function signedClass(value: number | null | undefined) {
   if (value == null || Number.isNaN(value) || value === 0) return undefined;
   return value > 0 ? "text-[#159957]" : "text-[#e04444]";
@@ -71,14 +77,40 @@ function Num({
   value,
   className,
   signed = false,
+  decimals = 2,
 }: {
   value: number | null | undefined;
   className?: string;
   signed?: boolean;
+  decimals?: 2 | 3;
 }) {
+  const formatted = decimals === 3 ? formatStatementAmount(value) : formatQar(value);
   return (
     <bdi dir="ltr" className={cn("font-data tabular-nums", signed && signedClass(value), className)}>
-      {formatQar(value)}
+      {formatted}
+    </bdi>
+  );
+}
+
+function StmtMoneyText({
+  money,
+  className,
+  signed = false,
+}: {
+  money: StatementMoney;
+  className?: string;
+  signed?: boolean;
+}) {
+  if (money.value == null) {
+    return (
+      <span className={cn(emptyClass, className)} title={money.reason}>
+        —
+      </span>
+    );
+  }
+  return (
+    <bdi dir="ltr" className={cn("font-data tabular-nums", signed && signedClass(money.value), className)}>
+      {formatStatementAmount(money.value)}
     </bdi>
   );
 }
@@ -253,19 +285,22 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
 
       <StatementTableShell footer={pagingFooter(paging)}>
         <Table
-          className="min-w-[64rem] table-fixed border-separate border-spacing-0"
+          className="min-w-[80rem] table-fixed border-separate border-spacing-0"
           wrapClassName={TABLE_WRAP}
         >
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className={cn(thClass, "w-12")}>#</TableHead>
-              <TableHead className={cn(thClass, "w-[18rem]")}>{t("statements.col.company")}</TableHead>
-              <TableHead className={cn(thClass, "w-[6.5rem]")}>{t("common.ticker")}</TableHead>
-              <TableHead className={cn(thClass, "w-[9.5rem] text-end")}>{t("common.qty")}</TableHead>
-              <TableHead className={cn(thClass, "w-[10.5rem] text-end")}>{t("statements.col.costTotal")}</TableHead>
-              <TableHead className={cn(thClass, "w-32 text-end")}>{t("statements.col.shareCost")}</TableHead>
-              <TableHead className={cn(thClass, "w-32 text-end")}>{t("statements.col.close")}</TableHead>
-              <TableHead className={cn(thClass, "w-32 text-end")}>{t("statements.col.market")}</TableHead>
+              <TableHead className={cn(thClass, "w-[16rem]")}>{t("statements.col.company")}</TableHead>
+              <TableHead className={cn(thClass, "w-[6rem]")}>{t("common.ticker")}</TableHead>
+              <TableHead className={cn(thClass, "w-[5.5rem] text-end")}>{t("statements.col.compId")}</TableHead>
+              <TableHead className={cn(thClass, "w-[9rem] text-end")}>{t("common.qty")}</TableHead>
+              <TableHead className={cn(thClass, "w-[10rem] text-end")}>{t("statements.col.costTotal")}</TableHead>
+              <TableHead className={cn(thClass, "w-28 text-end")}>{t("statements.col.shareCost")}</TableHead>
+              <TableHead className={cn(thClass, "w-28 text-end")}>{t("statements.col.close")}</TableHead>
+              <TableHead className={cn(thClass, "w-[7.5rem] text-end")}>{t("statements.col.closeDate")}</TableHead>
+              <TableHead className={cn(thClass, "w-28 text-end")}>{t("statements.col.market")}</TableHead>
+              <TableHead className={cn(thClass, "w-28 text-end")}>{t("statements.col.breakEven")}</TableHead>
               <TableHead className={cn(thClass, "w-32 text-end")}>{t("statements.col.displayedProfit")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -281,7 +316,7 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
                 <Fragment key={`port-${paging.start + idx}`}>
                   {showSector ? (
                     <TableRow className={cn("border-y border-[#d7e0ee]", tone.row)}>
-                      <TableCell colSpan={9} className="px-4" style={cellPy}>
+                      <TableCell colSpan={12} className="px-4" style={cellPy}>
                         <div className="flex h-12 w-full items-center gap-3 text-start">
                           <span className="w-7 shrink-0 text-center text-[11px] font-bold tabular-nums text-[#8a97b0]">
                             {String(si + 1).padStart(2, "0")}
@@ -309,27 +344,36 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
                         {line.ticker}
                       </span>
                     </TableCell>
+                    <TableCell className="px-3.5 text-end font-data tabular-nums text-[#657491]" style={cellPy}>
+                      {line.compId ?? "—"}
+                    </TableCell>
                     <TableCell className="px-3.5 text-end font-semibold tabular-nums" style={cellPy}>
-                      <Num value={line.quantity} />
+                      <Num value={line.quantity} decimals={3} />
                     </TableCell>
                     <TableCell className="px-3.5 text-end font-bold text-[#e04444]" style={cellPy}>
-                      <Num value={line.costValue} className="font-bold text-[#e04444]" />
+                      <Num value={line.costValue} decimals={3} className="font-bold text-[#e04444]" />
                     </TableCell>
                     <TableCell className="px-3.5 text-end font-semibold tabular-nums" style={cellPy}>
-                      <Num value={line.shareCost} />
+                      <Num value={line.shareCost} decimals={3} />
                     </TableCell>
                     <TableCell className="px-3.5 text-end" style={cellPy}>
                       {line.priceSource === "missing_close" ? (
                         <span className={emptyClass} title={t("statements.missingCloseHint")}>—</span>
                       ) : (
-                        <Num value={line.closePrice} />
+                        <Num value={line.closePrice} decimals={3} />
                       )}
                     </TableCell>
-                    <TableCell className="px-3.5 text-end" style={cellPy}>
-                      {line.marketValue == null ? <span className={emptyClass}>—</span> : <Num value={line.marketValue} />}
+                    <TableCell className="px-3.5 text-end font-mono text-xs text-[#657491]" style={cellPy}>
+                      {line.closeDate ?? "—"}
                     </TableCell>
                     <TableCell className="px-3.5 text-end" style={cellPy}>
-                      <MoneyText money={line.displayedProfit} signed />
+                      {line.marketValue == null ? <span className={emptyClass}>—</span> : <Num value={line.marketValue} decimals={3} />}
+                    </TableCell>
+                    <TableCell className="px-3.5 text-end" style={cellPy}>
+                      <StmtMoneyText money={line.breakEven} />
+                    </TableCell>
+                    <TableCell className="px-3.5 text-end" style={cellPy}>
+                      <StmtMoneyText money={line.displayedProfit} signed />
                     </TableCell>
                   </TableRow>
                 </Fragment>
@@ -337,23 +381,25 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
             })}
             <TableRow className={TOTAL_ROW}>
               <TableCell className={cn("px-3.5 text-center text-[11px] font-bold", totalMuted)} style={cellPy}>#</TableCell>
-              <TableCell className="px-3.5" colSpan={2} style={cellPy}>
+              <TableCell className="px-3.5" colSpan={3} style={cellPy}>
                 <span className="block text-[14px] font-bold text-white">{t("statements.totalAllSectors")}</span>
                 <span className={cn("mt-0.5 block text-[10px] font-medium", totalMuted)}>
                   {t("statements.totalSubtitle", { sectors: stmt.sectors.length, rows: lineCount })}
                 </span>
               </TableCell>
               <TableCell className="px-3.5 text-end text-[13px] font-bold tabular-nums text-white" style={cellPy}>
-                <Num value={grandQty} className="text-white" />
+                <Num value={grandQty} decimals={3} className="text-white" />
               </TableCell>
               <TableCell className="px-3.5 text-end text-[14px] font-extrabold text-[#ffb4a8]" style={cellPy}>
-                <Num value={stmt.grandTotalCost} className="font-extrabold text-[#ffb4a8]" />
+                <Num value={stmt.grandTotalCost} decimals={3} className="font-extrabold text-[#ffb4a8]" />
               </TableCell>
+              <TableCell className={cn("px-3.5 text-end", totalMuted)} style={cellPy}>—</TableCell>
               <TableCell className={cn("px-3.5 text-end", totalMuted)} style={cellPy}>—</TableCell>
               <TableCell className={cn("px-3.5 text-end", totalMuted)} style={cellPy}>—</TableCell>
               <TableCell className="px-3.5 text-end text-white" style={cellPy}>
-                {stmt.grandTotalMarketValue == null ? <span className={totalMuted}>—</span> : <Num value={stmt.grandTotalMarketValue} className="text-white" />}
+                {stmt.grandTotalMarketValue == null ? <span className={totalMuted}>—</span> : <Num value={stmt.grandTotalMarketValue} decimals={3} className="text-white" />}
               </TableCell>
+              <TableCell className={cn("px-3.5 text-end", totalMuted)} style={cellPy}>—</TableCell>
               <TableCell className={cn("px-3.5 text-end", totalMuted)} style={cellPy}>—</TableCell>
             </TableRow>
           </TableBody>

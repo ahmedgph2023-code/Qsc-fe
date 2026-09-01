@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "wouter";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeftRight, FileText, Info, Scale, SearchX, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Info, SearchX, Wallet } from "lucide-react";
+import { BalanceIcon, FileIcon } from "@/components/phase1/ExportFormatIcons";
 import { Shell } from "@/components/layout/Shell";
 import { getExtClient, getExtClientCash, getExtClientShares, extClientDisplayName } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { DatePicker } from "@/components/phase1/DatePicker";
 import { EmptyState } from "@/components/phase1/PageHeader";
 import { WorkbookKpiBar } from "@/components/phase1/WorkbookKpiBar";
 import { ClientHoldingsStation } from "@/components/phase1/ClientHoldingsStation";
+import { ClientInfoPanel } from "@/components/phase1/ClientInfoPanel";
 import { CDP_TAB, CdpTabsList } from "@/components/phase1/CdpTabs";
 import { DataTableCard, DataTableEmpty, DataTableHead, DataTableSkeletonRows } from "@/components/phase1/DataTableCard";
 import { SelectField } from "@/components/phase1/SelectField";
@@ -21,6 +23,9 @@ import { cn } from "@/lib/utils";
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat("en-QA", { style: "currency", currency: "QAR" }).format(val);
+
+const formatPrice3 = (val: number) =>
+  new Intl.NumberFormat("en-QA", { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(val);
 
 const todayQatarIso = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Qatar" });
 const LEDGER_PAGE_SIZES = [10, 20, 25, 50];
@@ -165,6 +170,7 @@ export default function CustomerDetailExt() {
               <TabsTrigger value="overview" className={CDP_TAB}>{t("customerDetail.holdings")}</TabsTrigger>
               <TabsTrigger value="transactions" className={CDP_TAB} disabled>{t("customerDetail.transactions")}</TabsTrigger>
               <TabsTrigger value="cash" className={CDP_TAB} disabled>{t("customerDetail.cash")}</TabsTrigger>
+              <TabsTrigger value="info" className={CDP_TAB} disabled>{t("customerDetail.clientDetails")}</TabsTrigger>
             </CdpTabsList>
             <TabsContent value="overview" className="cdp-pane mt-0 space-y-4">
               <ClientHoldingsStation
@@ -226,13 +232,13 @@ export default function CustomerDetailExt() {
               />
               <Button asChild variant="outline">
                 <Link href={`/statements?client=${encodeURIComponent(id || "")}&kind=portfolio&asOf=${encodeURIComponent(asOf)}`}>
-                  <FileText className="me-2 size-4" />
+                  <FileIcon className="me-2 size-4" />
                   {t("statements.open")}
                 </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href={`/balances?client=${encodeURIComponent(id || "")}&asOf=${encodeURIComponent(asOf)}`}>
-                  <Scale className="me-2 size-4" />
+                  <BalanceIcon className="me-2 size-4" />
                   {t("balances.open")}
                 </Link>
               </Button>
@@ -260,6 +266,7 @@ export default function CustomerDetailExt() {
             <TabsTrigger value="overview" className={CDP_TAB}>{t("customerDetail.holdings")}</TabsTrigger>
             <TabsTrigger value="transactions" className={CDP_TAB}>{t("customerDetail.transactions")}</TabsTrigger>
             <TabsTrigger value="cash" className={CDP_TAB}>{t("customerDetail.cash")}</TabsTrigger>
+            <TabsTrigger value="info" className={CDP_TAB}>{t("customerDetail.clientDetails")}</TabsTrigger>
           </CdpTabsList>
 
           <TabsContent value="overview" className="cdp-pane mt-0 space-y-4">
@@ -324,21 +331,23 @@ export default function CustomerDetailExt() {
               <TableHeader>
                 <TableRow className="clients-thead-row h-10">
                   <DataTableHead>{t("common.date")}</DataTableHead>
+                  <DataTableHead>{t("statements.col.invNo")}</DataTableHead>
                   <DataTableHead>{t("common.stock")}</DataTableHead>
                   <DataTableHead>{t("common.type")}</DataTableHead>
                   <DataTableHead>{t("common.side")}</DataTableHead>
                   <DataTableHead align="end">{t("common.quantity")}</DataTableHead>
                   <DataTableHead align="end" hint={showSourceHints ? t("customers2.source.unitPrice") : undefined}>{t("common.price")}</DataTableHead>
                   <DataTableHead align="end">{t("customerDetail.total")}</DataTableHead>
+                  <DataTableHead align="end">{t("statements.col.totalComm")}</DataTableHead>
                   <DataTableHead align="end">Net</DataTableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sharesBusy ? (
-                  <DataTableSkeletonRows cols={8} rows={sharePageSize} />
+                  <DataTableSkeletonRows cols={10} rows={sharePageSize} />
                 ) : shares.length === 0 ? (
                   <DataTableEmpty
-                    colSpan={8}
+                    colSpan={10}
                     icon={shareQ || shareSide || shareType
                       ? <SearchX className="size-7" strokeWidth={1.5} />
                       : <ArrowLeftRight className="size-7" strokeWidth={1.5} />}
@@ -349,6 +358,7 @@ export default function CustomerDetailExt() {
                   shares.map((tx) => (
                     <TableRow key={tx.id} className="clients-row">
                       <TableCell className="font-mono text-sm">{tx.date}</TableCell>
+                      <TableCell className="font-mono text-xs tabular-nums">{tx.invNo ?? "—"}</TableCell>
                       <TableCell>
                         <div className="cdp-stock">
                           <b>{tx.ticker}</b>
@@ -362,8 +372,9 @@ export default function CustomerDetailExt() {
                         </span>
                       </TableCell>
                       <TableCell className="text-end font-data">{tx.quantity.toLocaleString()}</TableCell>
-                      <TableCell className="text-end font-data">{formatCurrency(tx.unitPrice)}</TableCell>
+                      <TableCell className="text-end font-data">{formatPrice3(tx.unitPrice)}</TableCell>
                       <TableCell className={cn("text-end font-data", txCashClass(tx.side))}>{formatCurrency(tx.total)}</TableCell>
+                      <TableCell className="text-end font-data">{formatCurrency(tx.totalComm)}</TableCell>
                       <TableCell className={cn("text-end font-data", txCashClass(tx.side))}>{formatCurrency(tx.net)}</TableCell>
                     </TableRow>
                   ))
@@ -411,6 +422,7 @@ export default function CustomerDetailExt() {
               <TableHeader>
                 <TableRow className="clients-thead-row h-10">
                   <DataTableHead>{t("customerDetail.postDate")}</DataTableHead>
+                  <DataTableHead>{t("statements.col.docDate")}</DataTableHead>
                   <DataTableHead>{t("common.type")}</DataTableHead>
                   <DataTableHead>{t("common.notes")}</DataTableHead>
                   <DataTableHead align="end">{t("common.status")}</DataTableHead>
@@ -421,10 +433,10 @@ export default function CustomerDetailExt() {
               </TableHeader>
               <TableBody>
                 {cashBusy ? (
-                  <DataTableSkeletonRows cols={7} rows={cashPageSize} />
+                  <DataTableSkeletonRows cols={8} rows={cashPageSize} />
                 ) : cashRows.length === 0 ? (
                   <DataTableEmpty
-                    colSpan={7}
+                    colSpan={8}
                     icon={cashQ || cashStatus
                       ? <SearchX className="size-7" strokeWidth={1.5} />
                       : <Wallet className="size-7" strokeWidth={1.5} />}
@@ -435,6 +447,7 @@ export default function CustomerDetailExt() {
                   cashRows.map((row) => (
                     <TableRow key={row.id} className="clients-row">
                       <TableCell className="font-mono text-sm">{row.postDate}</TableCell>
+                      <TableCell className="font-mono text-sm">{row.docDate}</TableCell>
                       <TableCell className="font-mono text-xs">{row.docCode}</TableCell>
                       <TableCell className="max-w-[28rem] truncate text-sm">{row.eRemarks || row.remarks || "—"}</TableCell>
                       <TableCell className="text-end font-mono text-xs">{row.status}</TableCell>
@@ -446,6 +459,10 @@ export default function CustomerDetailExt() {
                 )}
               </TableBody>
             </DataTableCard>
+          </TabsContent>
+
+          <TabsContent value="info" className="cdp-pane mt-0">
+            <ClientInfoPanel data={data} />
           </TabsContent>
         </Tabs>
       </div>

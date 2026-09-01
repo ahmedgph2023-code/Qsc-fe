@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Inbox, Scale } from "lucide-react";
+import { AlertTriangle, ArrowRight, Inbox } from "lucide-react";
 import { Shell } from "@/components/layout/Shell";
 import { PageHeader, EmptyState } from "@/components/phase1/PageHeader";
 import { DatePicker } from "@/components/phase1/DatePicker";
@@ -12,7 +12,7 @@ import { StatsSummaryBar, type StatsSummaryItem } from "@/components/phase1/Stat
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DataTableToolbar, useClientTablePage } from "@/components/phase1/DataTableCard";
+import { DataTableIconBtn, DataTableToolbar, useClientTablePage } from "@/components/phase1/DataTableCard";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
@@ -167,14 +167,6 @@ export default function Balances() {
         className="!mt-4"
         title={t("balances.title")}
         description={t("balances.description")}
-        actions={
-          canRun ? (
-            <Button onClick={() => runMut.mutate()} disabled={runMut.isPending}>
-              <Scale />
-              {runMut.isPending ? t("common.loading") : t("balances.run")}
-            </Button>
-          ) : null
-        }
       />
 
       {error ? <p className="error-banner">{error}</p> : null}
@@ -192,6 +184,13 @@ export default function Balances() {
                 prefix={t("balances.asOf")}
                 value={asOf}
                 onChange={(iso) => setAsOf(iso || todayQatarIso())}
+                dataDates={qscDates.map((d) => d.date)}
+                storedDates={storedDates}
+                quickDates={qscDates.map((d) => ({
+                  date: d.date,
+                  rows: d.rows,
+                  stored: storedDates.includes(d.date),
+                }))}
               />
               <SelectField
                 className="h-9 w-[150px] min-w-[150px] max-w-[150px] shrink-0"
@@ -208,27 +207,15 @@ export default function Balances() {
                 ]}
                 aria-label={t("balances.col.status")}
               />
-              {qscDates.map((d) => {
-                const stored = storedDates.includes(d.date);
-                const active = d.date === asOf;
-                return (
-                  <button
-                    key={d.date}
-                    type="button"
-                    onClick={() => setAsOf(d.date)}
-                    className={cn(
-                      "inline-flex h-9 items-center rounded-md px-2.5 text-[11px] font-bold",
-                      active ? "bg-[#175cd3] text-white" : "bg-[#eef4ff] text-[#175cd3] hover:bg-[#dce8ff]",
-                    )}
-                  >
-                    {d.date}
-                    <span className={cn("ms-1 font-mono text-[10px]", active ? "opacity-80" : "opacity-70")}>
-                      {d.rows}
-                      {stored ? ` · ${t("balances.inIpms")}` : ""}
-                    </span>
-                  </button>
-                );
-              })}
+              {canRun ? (
+                <DataTableIconBtn
+                  label={runMut.isPending ? t("common.loading") : t("balances.run")}
+                  icon={<ArrowRight className="size-5 rtl:rotate-180" />}
+                  active
+                  disabled={runMut.isPending}
+                  onClick={() => runMut.mutate()}
+                />
+              ) : null}
               {!qscDates.length && data?.latestQscDate && data.latestQscDate !== asOf ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => setAsOf(data.latestQscDate!)}>
                   {t("balances.useLatestQsc")}

@@ -78,7 +78,7 @@ export default function Rebalances() {
           },
           {
             id: "draft",
-            icon: "/documents.png",
+            icon: "/file.png",
             label: t("rebalances.draft"),
             value: <AnimatedNumber value={draft} format="integer" />,
             hint: t("common.draft"),

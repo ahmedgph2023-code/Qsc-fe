@@ -15,7 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, AlertTriangle, Plus, Loader2, Upload, Download, Trash2, PenLine, IdCard, Bell, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, AlertTriangle, Plus, Loader2, Trash2, PenLine, IdCard, Bell, MoreHorizontal } from "lucide-react";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MandateBadge } from "@/components/phase1/MandateBadge";
 import { FeeBandsCard } from "@/components/phase1/FeeBandsCard";
@@ -1033,7 +1034,7 @@ function BulkUploadDialog({ portfolioId, queryClient }: { portfolioId: string; q
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setResult(null); }}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="cdp-upload"><Upload className="w-4 h-4 me-1" /> {t("customerDetail.bulkUploadBtn")}</Button>
+        <Button size="sm" variant="outline" className="cdp-upload"><ExcelIcon className="me-1 size-4" /> {t("customerDetail.bulkUploadBtn")}</Button>
       </DialogTrigger>
       <DialogContent className="cdp-modal flex max-h-[90vh] flex-col gap-4 overflow-hidden sm:max-w-[560px]">
         <DialogHeader className="shrink-0">
@@ -1044,7 +1045,7 @@ function BulkUploadDialog({ portfolioId, queryClient }: { portfolioId: string; q
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-1 pe-1">
           <Button variant="outline" size="sm" className="w-full" onClick={() => downloadTransactionTemplate()}>
-            <Download className="w-4 h-4 me-2" /> {t("common.downloadTemplate")}
+            <ExcelIcon className="me-2 size-4" /> {t("common.downloadTemplate")}
           </Button>
           <div className="space-y-2">
             <Label className="text-xs uppercase font-mono">{t("customerDetail.excelFile")}</Label>
@@ -1052,7 +1053,7 @@ function BulkUploadDialog({ portfolioId, queryClient }: { portfolioId: string; q
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Button onClick={() => uploadMut.mutate(false)} disabled={!uploadFile || uploadMut.isPending}>
-              {uploadMut.isPending ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Upload className="w-4 h-4 me-2" />}
+              {uploadMut.isPending ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <ExcelIcon className="me-2 size-4" />}
               {t("customerDetail.uploadProcess")}
             </Button>
             <Button variant="secondary" onClick={() => uploadMut.mutate(true)} disabled={!uploadFile || uploadMut.isPending}>

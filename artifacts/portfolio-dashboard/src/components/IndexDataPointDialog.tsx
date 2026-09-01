@@ -16,7 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/phase1/DatePicker";
 import { UploadConflictPreviewDialog, type ConflictDecision } from "@/components/UploadConflictPreviewDialog";
-import { Loader2, Upload, Download } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
 
 function fmtLevel(n: number | null | undefined) {
   if (n == null || !Number.isFinite(Number(n))) return "—";
@@ -215,11 +216,11 @@ export function IndexExcelUploadControls({
       <div className="flex flex-wrap gap-2">
         {showTemplate && (
           <Button type="button" variant="outline" size="sm" onClick={() => downloadIndexTemplate()}>
-            <Download className="w-4 h-4 me-2" /> {t("dialogs.indexDataPoint.template")}
+            <ExcelIcon className="me-2 size-4" /> {t("dialogs.indexDataPoint.template")}
           </Button>
         )}
         <Button type="button" size="sm" disabled={!indexId || busy} onClick={() => fileRef.current?.click()}>
-          {busy ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Upload className="w-4 h-4 me-2" />}
+          {busy ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
           {t("dialogs.indexDataPoint.uploadPreview")}
         </Button>
       </div>

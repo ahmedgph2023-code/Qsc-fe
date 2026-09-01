@@ -15,6 +15,7 @@ function Calendar({
   classNames,
   showOutsideDays = true,
   captionLayout = "label",
+  navLayout = "around",
   formatters,
   components,
   ...props
@@ -26,6 +27,7 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       className={cn("group/calendar w-fit bg-transparent p-0", className)}
       captionLayout={captionLayout}
+      navLayout={navLayout}
       formatters={{
         formatWeekdayName: (date) =>
           date.toLocaleDateString("en-GB", { weekday: "narrow" }),
@@ -36,9 +38,9 @@ function Calendar({
       classNames={{
         root: cn("w-fit", defaultClassNames.root),
         months: cn("relative flex flex-col gap-4 sm:flex-row", defaultClassNames.months),
-        month: cn("flex w-fit flex-col gap-3", defaultClassNames.month),
+        month: cn("relative flex w-fit flex-col gap-3", defaultClassNames.month),
         month_caption: cn(
-          "relative flex h-10 w-full items-center justify-center",
+          "relative flex h-10 w-full items-center justify-center px-9",
           defaultClassNames.month_caption
         ),
         caption_label: cn(
@@ -47,15 +49,15 @@ function Calendar({
           defaultClassNames.caption_label
         ),
         nav: cn(
-          "absolute inset-x-0 top-0 flex items-center justify-between",
+          "pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between",
           defaultClassNames.nav
         ),
         button_previous: cn(
-          "inline-flex size-8 items-center justify-center rounded-full border border-white/80 bg-white/80 text-[#53658c] shadow-[inset_1px_1px_2px_#fff,0_4px_10px_rgba(61,88,145,0.1)] transition hover:bg-white hover:text-[#1659ea] disabled:opacity-30",
+          "pointer-events-auto absolute start-0 top-0 z-10 inline-flex size-8 items-center justify-center rounded-full border border-white/80 bg-white/80 text-[#53658c] shadow-[inset_1px_1px_2px_#fff,0_4px_10px_rgba(61,88,145,0.1)] transition hover:bg-white hover:text-[#1659ea] disabled:opacity-30",
           defaultClassNames.button_previous
         ),
         button_next: cn(
-          "inline-flex size-8 items-center justify-center rounded-full border border-white/80 bg-white/80 text-[#53658c] shadow-[inset_1px_1px_2px_#fff,0_4px_10px_rgba(61,88,145,0.1)] transition hover:bg-white hover:text-[#1659ea] disabled:opacity-30",
+          "pointer-events-auto absolute end-0 top-0 z-10 inline-flex size-8 items-center justify-center rounded-full border border-white/80 bg-white/80 text-[#53658c] shadow-[inset_1px_1px_2px_#fff,0_4px_10px_rgba(61,88,145,0.1)] transition hover:bg-white hover:text-[#1659ea] disabled:opacity-30",
           defaultClassNames.button_next
         ),
         dropdowns: cn(
@@ -123,6 +125,8 @@ function CalendarDayButton({
 
   const selectedSingle =
     modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle
+  const isSelected = selectedSingle || modifiers.range_start || modifiers.range_end
+  const extra = modifiers as typeof modifiers & { hasData?: boolean; inIpms?: boolean }
 
   return (
     <button
@@ -134,6 +138,8 @@ function CalendarDayButton({
       data-range-start={modifiers.range_start || undefined}
       data-range-end={modifiers.range_end || undefined}
       data-range-middle={modifiers.range_middle || undefined}
+      data-has-data={extra.hasData || undefined}
+      data-in-ipms={extra.inIpms || undefined}
       className={cn(
         defaultClassNames.day_button,
         "inline-flex size-9 items-center justify-center rounded-full text-[13px] font-medium tabular-nums text-[#1e3268] transition-colors",
@@ -143,7 +149,9 @@ function CalendarDayButton({
         modifiers.range_start && "bg-[#1659ea] font-bold text-white hover:bg-[#1659ea] hover:text-white",
         modifiers.range_end && "bg-[#1659ea] font-bold text-white hover:bg-[#1659ea] hover:text-white",
         modifiers.range_middle && "rounded-none bg-[#edf2ff] text-[#1659ea]",
-        modifiers.today && !modifiers.selected && "bg-[#e8eefc] font-semibold text-[#1659ea] ring-1 ring-inset ring-[#4d79e9]/35",
+        !isSelected && extra.inIpms && "bg-[#dce8ff] font-semibold text-[#175cd3] ring-1 ring-inset ring-[#175cd3]/35 hover:bg-[#cce0ff] hover:text-[#175cd3]",
+        !isSelected && !extra.inIpms && extra.hasData && "bg-[#eef4ff] font-semibold text-[#175cd3] hover:bg-[#dce8ff] hover:text-[#175cd3]",
+        modifiers.today && !isSelected && !extra.hasData && "bg-[#e8eefc] font-semibold text-[#1659ea] ring-1 ring-inset ring-[#4d79e9]/35",
         modifiers.outside && "text-[#b7c3de] hover:text-[#7b8cb3]",
         modifiers.disabled && "pointer-events-none opacity-30",
         className

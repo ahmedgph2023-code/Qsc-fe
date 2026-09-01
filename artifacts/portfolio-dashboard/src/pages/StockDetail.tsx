@@ -37,10 +37,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StockPricePointDialog, StockExcelUploadButton } from "@/components/StockPricePointDialog";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
 import {
-  ChevronLeft, Plus, PenLine, Trash2, Loader2, Download, AlertTriangle,
+  ChevronLeft, Plus, PenLine, Trash2, Loader2, AlertTriangle,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area,
@@ -829,11 +830,11 @@ export default function StockDetail() {
                       onClick={() => handleExport("filtered")}
                       disabled={!!exporting || !pricesPage?.pagination.total || (!dateExact && !dateFrom && !dateTo)}
                     >
-                      {exporting === "filtered" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Download className="w-4 h-4 me-2" />}
+                      {exporting === "filtered" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                       {t("common.exportExcel")}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => handleExport("all")} disabled={!!exporting}>
-                      {exporting === "all" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Download className="w-4 h-4 me-2" />}
+                      {exporting === "all" ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                       {t("common.exportAll")}
                     </Button>
                   </>

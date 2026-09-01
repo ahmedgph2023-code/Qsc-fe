@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PdfIcon } from "@/components/phase1/ExportFormatIcons";
 import i18n from "@/i18n";
 
 /** Opens a print window with HTML body (P1-PRINT / report packs). */
@@ -64,7 +64,7 @@ export function PrintButton({
       size={size}
       onClick={() => openPrintDocument(title, buildHtml())}
     >
-      <Printer className="me-2 h-4 w-4" />
+      <PdfIcon className="me-2 size-4" />
       {label ?? t("common.print")}
     </Button>
   );

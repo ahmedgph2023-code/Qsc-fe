@@ -3,12 +3,13 @@ import type {
   AccountStatement,
   ClientStatement,
   PortfolioStatement,
+  PortfolioStatementLine,
   RealizedDetailsStatement,
   RealizedSummaryStatement,
   StatementInvestorHeader,
   StatementMoney,
 } from "@/lib/statement-types";
-import { formatQar } from "@/components/statements/StatementPreview";
+import { formatQar, formatStatementAmount } from "@/components/statements/StatementPreview";
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -37,6 +38,10 @@ function num(n: number | null | undefined) {
   return n == null ? "" : formatQar(n);
 }
 
+function price3(n: number | null | undefined) {
+  return n == null ? "" : formatStatementAmount(n);
+}
+
 function field(label: string, value: string | null | undefined) {
   return `<div class="field"><span class="lbl">${escapeHtml(label)}</span><span class="val">${escapeHtml(value || "")}</span></div>`;
 }
@@ -46,29 +51,64 @@ function logoUrl() {
   return `${base.replace(/\/$/, "")}/logo.png`;
 }
 
+function signedNum(n: number | null | undefined) {
+  if (n == null || Number.isNaN(n)) return "";
+  const abs = formatQar(Math.abs(n));
+  return n < 0 ? `(${abs})` : abs;
+}
+
+function signedMoney(m: StatementMoney) {
+  return m.value == null ? "" : signedNum(m.value);
+}
+
+function investorBlockPortfolio(inv: StatementInvestorHeader) {
+  const name = inv.displayName || inv.nameAr || inv.nameEn;
+  const tradeQe = inv.tradingAccountQe || inv.cAccount;
+  return `
+    <div class="id-grid id-grid--client">
+      ${field("Client Name", name)}
+      ${field("Account Name", name)}
+      ${field("Account Type", inv.accountTypePrinted || inv.clientType)}
+      ${field("Client No.", inv.clientCode)}
+      ${field("NIN QE", inv.nin)}
+      ${field("Address", inv.address)}
+      ${field("Tr. Acc. QE", tradeQe)}
+      ${field("Fax", inv.fax)}
+      ${field("Mobile", inv.mobile)}
+      ${field("P.O.B.", inv.poBox)}
+      ${field("City", inv.city)}
+      ${field("Country", inv.country)}
+    </div>`;
+}
+
 function investorBlock(inv: StatementInvestorHeader, extra: Array<[string, string | null | undefined]>) {
   const name = inv.displayName || inv.nameAr || inv.nameEn;
+  const tradeQe = inv.tradingAccountQe || inv.cAccount;
   return `
     <div class="id-grid">
       ${field("Client Name", name)}
       ${field("Client No.", inv.clientCode)}
+      ${field("Client ID", String(inv.accountId))}
       ${field("NIN", inv.nin)}
-      ${field("Account", String(inv.accountId))}
-      ${field("Currency", inv.currency)}
-      ${field("P.O.Box", inv.poBox)}
-      ${field("Tel", inv.tel)}
-      ${field("Fax", inv.fax)}
       ${field("Address", inv.address)}
-      ${field("City", inv.city)}
+      ${field("P.O. Box", inv.poBox)}
       ${field("Country", inv.country)}
+      ${field("City", inv.city)}
       ${field("Mobile", inv.mobile)}
-      ${field("C_ACCOUNT", inv.cAccount)}
-      ${field("Client type (raw)", inv.clientType)}
+      ${field("Fax", inv.fax)}
+      ${field("Trade Acc. QE", tradeQe)}
+      ${field("Currency", inv.currency)}
+      ${field("Account Type", inv.accountTypePrinted || inv.clientType)}
       ${extra.map(([l, v]) => field(l, v)).join("")}
     </div>`;
 }
 
-function printChrome(stmt: ClientStatement, periodLine: string, body: string) {
+function printChrome(
+  stmt: ClientStatement,
+  periodLine: string,
+  body: string,
+  investorHtml: string,
+) {
   const lang = i18n.language === "ar" ? "ar" : "en";
   const dir = lang === "ar" ? "rtl" : "ltr";
   const title = lang === "ar" ? stmt.titleAr : stmt.titleEn;
@@ -88,8 +128,16 @@ function printChrome(stmt: ClientStatement, periodLine: string, body: string) {
   .titles .co { font-size: 13px; font-weight: 700; color: #1a365d; }
   .titles h1 { font-size: 15px; margin: 2px 0 0; }
   .titles .ar { font-size: 13px; margin: 0; }
-  .period { margin: 6px 0 10px; font-weight: 700; }
-  .id-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 16px; margin-bottom: 10px; }
+  .period { margin: 6px 0 4px; font-weight: 700; }
+  .print-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 9px; color: #444; margin-bottom: 8px; }
+  .client-row { display: grid; grid-template-columns: 1fr 240px; gap: 12px; align-items: start; margin-bottom: 10px; }
+  .security-alloc { border: 1px solid #ccd6e4; background: #f8faff; padding: 8px; font-size: 9px; }
+  .security-alloc h3 { margin: 0 0 6px; font-size: 10px; text-transform: uppercase; color: #1a365d; }
+  .security-alloc table { margin: 0; font-size: 9px; }
+  .security-alloc td { padding: 2px 4px; border: none; }
+  .security-alloc td.num { text-align: end; }
+  .id-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 12px; margin-bottom: 0; }
+  .id-grid--client { grid-template-columns: 1fr; }
   .field { display: flex; gap: 6px; min-height: 16px; }
   .lbl { color: #555; min-width: 88px; }
   .val { font-weight: 600; }
@@ -101,7 +149,16 @@ function printChrome(stmt: ClientStatement, periodLine: string, body: string) {
   td.num, th.num { text-align: end; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
   .open { background: #f4f4f4; font-weight: 600; }
   .sector { background: #d9e4f2; font-weight: 700; }
-  .recap { width: 360px; margin-inline-start: auto; }
+  .subtotal { background: #eef2f7; font-weight: 600; }
+  .grand { background: #1a365d; color: #fff; font-weight: 700; }
+  .grand td { border-color: #1a365d; color: #fff; }
+  .page-break { page-break-before: always; break-before: page; margin-top: 12px; }
+  .page2 { width: 100%; margin-top: 8px; }
+  .page2 th { background: #d9e4f2; font-size: 9px; text-align: center; }
+  .page2 .section { background: #eef2f7; font-weight: 700; text-align: start; }
+  .page2 .summary { background: #f4f7fb; font-weight: 700; }
+  .end-report { margin-top: 16px; font-weight: 700; text-align: center; font-size: 11px; }
+  .recap { width: 420px; margin-inline-start: auto; }
   .recap td:first-child { font-weight: 600; }
   .disclaimer { font-size: 9px; color: #333; margin-top: 12px; max-width: 90%; }
   .foot { position: running(printFoot); display: flex; justify-content: space-between; font-size: 9px; color: #444; margin-top: 16px; border-top: 1px solid #ccc; padding-top: 6px; }
@@ -118,69 +175,167 @@ function printChrome(stmt: ClientStatement, periodLine: string, body: string) {
       <p class="ar">${escapeHtml(stmt.titleAr)}</p>
     </div>
   </header>
+  <div class="print-meta">
+    <span>Print Date: ${fmtDateTime(printedAt)}</span>
+    <span>Page <span class="page-num"></span></span>
+  </div>
   <div class="period">${escapeHtml(periodLine)}</div>
-  ${investorBlock(stmt.investor, [])}
+  ${investorHtml}
   ${body}
   <footer class="foot">
-    <span>IPMS</span>
-    <span>${escapeHtml(stmt.investor.displayName || stmt.investor.nameEn || stmt.investor.nameAr)}</span>
+    <span>User: IPMS</span>
+    <span>Workstation: IPMS</span>
     <span>Printed at ${fmtDateTime(printedAt)}</span>
   </footer>
-<script>window.onload=function(){window.focus();window.print();}</script>
+<script>
+  window.onload=function(){
+    try {
+      var pages = Math.max(1, Math.ceil(document.body.scrollHeight / (1122 - 80)));
+      var el = document.querySelector(".page-num");
+      if (el) el.textContent = "1 of " + pages;
+    } catch (e) {}
+    window.focus();
+    window.print();
+  };
+</script>
 </body></html>`;
 }
 
+function flatLines(stmt: PortfolioStatement) {
+  return stmt.sectors
+    .flatMap((s) => s.lines)
+    .sort((a, b) => (b.marketValue ?? 0) - (a.marketValue ?? 0));
+}
+
+function stockWeightPct(line: PortfolioStatementLine, totalMv: number | null) {
+  if (line.marketValue == null || !totalMv) return "";
+  return formatQar((line.marketValue / totalMv) * 100);
+}
+
+function securityLabel(line: PortfolioStatementLine) {
+  const code = line.compId ?? "";
+  return `${code} | ${line.ticker} | ${line.companyName}`;
+}
+
+function securityAllocationBlock(stmt: PortfolioStatement) {
+  const lines = flatLines(stmt);
+  const totalMv = stmt.grandTotalMarketValue;
+  if (lines.length === 0) return `<div class="security-alloc"><h3>Security Allocation</h3><p>—</p></div>`;
+  const rows = lines.map((l) => {
+    const pct = stockWeightPct(l, totalMv);
+    const mv = l.marketValue == null ? "—" : num(l.marketValue);
+    return `<tr><td>${escapeHtml(l.ticker)}</td><td class="num">${pct}%</td><td class="num">${mv}</td></tr>`;
+  }).join("");
+  return `
+    <div class="security-alloc">
+      <h3>Security Allocation</h3>
+      <table><tbody>${rows}
+        <tr><td><b>Total</b></td><td class="num">100%</td><td class="num">${num(totalMv)}</td></tr>
+      </tbody></table>
+    </div>`;
+}
+
+function portfolioClientRow(stmt: PortfolioStatement) {
+  return `<div class="client-row">${investorBlockPortfolio(stmt.investor)}${securityAllocationBlock(stmt)}</div>`;
+}
+
+function portfolioPage2(stmt: PortfolioStatement) {
+  const f = stmt.footer;
+  const cash = f.clientNetCashBalance.value;
+  const mv = stmt.grandTotalMarketValue;
+  const portfolioValue = mv != null && cash != null ? mv + cash : null;
+  const expectedTotal =
+    f.expectedProfitLoss.value != null && f.currencyDifference.value != null
+      ? f.expectedProfitLoss.value + f.currencyDifference.value
+      : f.expectedProfitLoss.value;
+  return `
+    <div class="page-break"></div>
+    <table class="page2">
+      <thead>
+        <tr>
+          <th>Market Value</th><th>Expected Sell Comm.</th><th>Net (Market Value - Comm)</th>
+          <th>Cash Balance</th><th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num">${num(mv)}</td>
+          <td class="num">${money(f.expectedSellCommission)}</td>
+          <td class="num">${money(f.netAfterExpectedSellComm)}</td>
+          <td class="num">${money(f.clientNetCashBalance)}</td>
+          <td class="num">${portfolioValue == null ? "" : signedNum(portfolioValue)}</td>
+        </tr>
+        <tr class="section"><td colspan="5">Realized Profit/Loss</td></tr>
+        <tr>
+          <th>Trading P/L</th><th>Dividends Received</th><th>Dividends Receivable</th><th colspan="2">Total</th>
+        </tr>
+        <tr>
+          <td class="num">${signedMoney(f.realizedTradingPl)}</td>
+          <td class="num">${money(f.receivedProfits)}</td>
+          <td class="num">${money(f.nonReceivedProfits)}</td>
+          <td class="num" colspan="2">${signedMoney(f.realizedTotal)}</td>
+        </tr>
+        <tr class="section"><td colspan="5">Expected Profit/Loss</td></tr>
+        <tr>
+          <th>Trading P/L</th><th>Currency Variation</th><th>Total</th><th>Net Profit/Loss</th><th>Portfolio Value</th>
+        </tr>
+        <tr>
+          <td class="num">${signedMoney(f.expectedProfitLoss)}</td>
+          <td class="num">${money(f.currencyDifference)}</td>
+          <td class="num">${expectedTotal == null ? "" : signedNum(expectedTotal)}</td>
+          <td class="num summary">${signedMoney(f.netProfitLoss)}</td>
+          <td class="num summary">${portfolioValue == null ? "" : signedNum(portfolioValue)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="end-report">End of Report</p>`;
+}
+
 function portfolioBody(stmt: PortfolioStatement) {
-  const rows = stmt.sectors.flatMap((sector) => {
-    const head = `<tr class="sector"><td colspan="14">${escapeHtml(sector.sectorName)}${sector.weightPct == null ? "" : ` (${formatQar(sector.weightPct)}%)`}</td></tr>`;
-    const lines = sector.lines.map((l) => `<tr>
-      <td>${escapeHtml(l.companyName)}</td>
-      <td>${escapeHtml(l.currency)}</td>
-      <td class="num">${l.compId ?? ""}</td>
-      <td>${escapeHtml(l.accountTypePrinted || "")}</td>
+  const lines = flatLines(stmt);
+  const totalUnrealized = lines.reduce((s, l) => s + (l.unrealizedGross ?? 0), 0);
+  const tableRows = lines.map((l) => `<tr>
+      <td class="num">${l.lineNo}</td>
+      <td>${escapeHtml(securityLabel(l))}</td>
       <td class="num">${num(l.quantity)}</td>
       <td class="num">${num(l.costValue)}</td>
-      <td class="num">${num(l.shareCost)}</td>
+      <td class="num">${price3(l.shareCost)}</td>
       <td class="num">${money(l.breakEven)}</td>
-      <td class="num">${l.priceSource === "missing_close" ? "" : num(l.closePrice)}</td>
+      <td class="num">${l.priceSource === "missing_close" ? "" : price3(l.closePrice)}</td>
       <td>${fmtDate(l.closeDate)}</td>
       <td class="num">${num(l.marketValue)}</td>
-      <td class="num">${money(l.displayedProfit)}</td>
-      <td class="num">${money(l.displayedProfitPct)}</td>
+      <td class="num">${stockWeightPct(l, stmt.grandTotalMarketValue)}</td>
+      <td class="num">${l.unrealizedGross == null ? "" : signedNum(l.unrealizedGross)}</td>
+      <td class="num">${l.profitPctGross == null ? "" : formatQar(l.profitPctGross)}</td>
       <td class="num">${num(l.currencyDifference)}</td>
-    </tr>`);
-    return [head, ...lines];
-  });
-  const recap = [
-    ["Market Value", num(stmt.grandTotalMarketValue)],
-    ["Expected Profit/Loss", money(stmt.footer.expectedProfitLoss)],
-    ["Expected Sell Comm.", money(stmt.footer.expectedSellCommission)],
-    ["Net (after expected sell comm.)", money(stmt.footer.netAfterExpectedSellComm)],
-    ["Currency Difference", money(stmt.footer.currencyDifference)],
-    ["Dr/Cr Balance", money(stmt.footer.drCrBalance)],
-    ["Realized Trading P/L", money(stmt.footer.realizedTradingPl)],
-    ["Received Profits", money(stmt.footer.receivedProfits)],
-    ["NonReceived Profits", money(stmt.footer.nonReceivedProfits)],
-    ["Realized total", money(stmt.footer.realizedTotal)],
-    ["Client Net Cash Bal.", money(stmt.footer.clientNetCashBalance)],
-    ["Net Profit/Loss", money(stmt.footer.netProfitLoss)],
-    ["Net Asset Value", money(stmt.footer.netAssetValue)],
-  ].map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join("");
+    </tr>`).join("");
   return `
+    ${portfolioClientRow(stmt)}
+    <h3 style="margin:10px 0 4px;font-size:11px;color:#1a365d">Qatar Stock Exchange</h3>
     <table>
       <thead>
         <tr>
-          <th>Company</th><th>Curr.</th><th>Code</th><th>Type</th>
-          <th class="num">Shares</th><th class="num">Shares Value</th><th class="num">Share Cost</th>
-          <th class="num">Break Even</th><th class="num">Close Price</th><th>Close Date</th>
-          <th class="num">Market Value</th><th class="num">Profit</th><th class="num">Profit %</th><th class="num">Curr. Diff</th>
+          <th class="num">No.</th><th>Security</th>
+          <th class="num">Number of Securities</th><th class="num">Value</th><th class="num">Security Cost</th>
+          <th class="num">Break Even</th><th class="num">Closing Price</th><th>Closing Date</th>
+          <th class="num">Market Value</th><th class="num">Stock %</th>
+          <th class="num">Unrealized Profit/Loss</th><th class="num">P/L %</th><th class="num">Currency Variation</th>
         </tr>
       </thead>
-      <tbody>${rows.join("")}</tbody>
+      <tbody>
+        ${tableRows}
+        <tr class="grand">
+          <td colspan="3">Total — Qatari Riyal (QAR)</td>
+          <td class="num">${num(stmt.grandTotalCost)}</td>
+          <td colspan="4"></td>
+          <td class="num">${num(stmt.grandTotalMarketValue)}</td>
+          <td></td>
+          <td class="num">${signedNum(totalUnrealized)}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
     </table>
-    <table class="recap">
-      <tbody>${recap}</tbody>
-    </table>`;
+    ${portfolioPage2(stmt)}`;
 }
 
 function accountBody(stmt: AccountStatement) {
@@ -288,19 +443,34 @@ function detailsBody(stmt: RealizedDetailsStatement) {
 
 export function buildStatementPrintHtml(stmt: ClientStatement): string {
   if (stmt.kind === "portfolio") {
-    return printChrome(stmt, `Closing Prices as of ${fmtDate(stmt.closingPricesAsOf)}`, portfolioBody(stmt));
+    return printChrome(
+      stmt,
+      `Closing Prices as of ${fmtDate(stmt.closingPricesAsOf)}`,
+      portfolioBody(stmt),
+      "",
+    );
   }
   if (stmt.kind === "account") {
-    return printChrome(stmt, `From ${fmtDate(stmt.dates.from)} To ${fmtDate(stmt.dates.to)}`, accountBody(stmt));
+    return printChrome(
+      stmt,
+      `From ${fmtDate(stmt.dates.from)} To ${fmtDate(stmt.dates.to)}`,
+      accountBody(stmt),
+      investorBlock(stmt.investor, []),
+    );
   }
   if (stmt.kind === "realized_summary") {
     const period =
       stmt.dates.mode === "range"
         ? `From ${fmtDate(stmt.dates.from)} To ${fmtDate(stmt.dates.to)}`
         : `As of ${fmtDate(stmt.dates.asOf)}`;
-    return printChrome(stmt, period, summaryBody(stmt));
+    return printChrome(stmt, period, summaryBody(stmt), investorBlock(stmt.investor, []));
   }
-  return printChrome(stmt, `From ${fmtDate(stmt.dates.from)} To ${fmtDate(stmt.dates.to)}`, detailsBody(stmt));
+  return printChrome(
+    stmt,
+    `From ${fmtDate(stmt.dates.from)} To ${fmtDate(stmt.dates.to)}`,
+    detailsBody(stmt),
+    investorBlock(stmt.investor, []),
+  );
 }
 
 export function openStatementPrint(stmt: ClientStatement) {

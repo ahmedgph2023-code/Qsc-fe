@@ -575,6 +575,10 @@ export type ExtClientDetail = {
   clientType?: string | null;
   email?: string | null;
   mobile?: string | null;
+  poBox?: string | null;
+  fax?: string | null;
+  address?: string | null;
+  city?: string | null;
   asOf: string;
   cashBalance: number;
   equityMv: number;

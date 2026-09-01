@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { StockExcelUploadButton } from "@/components/StockPricePointDialog";
-import { Plus, Upload, Trash2, Loader2, Check, Building2, Download, Tags } from "lucide-react";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
+import { Plus, Trash2, Loader2, Check, Building2, Tags } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatedNumber } from "@/components/phase1/AnimatedNumber";
 import { QuoteBoard, quoteLogoLabel } from "@/components/phase1/QuoteBoard";
@@ -72,7 +73,7 @@ function AddStockDialog({ stocks, queryClient }: { stocks: StockData[]; queryCli
             onClick={() => setTab("upload")}
             className={`h-auto flex-1 rounded-none border-b-2 -mb-[1px] py-2.5 ${tab === "upload" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
-            <Upload className="w-4 h-4" /> {t("stocks.uploadPrices")}
+            <ExcelIcon className="me-2 size-4" /> {t("stocks.uploadPrices")}
           </Button>
         </div>
 
@@ -131,7 +132,7 @@ function AddStockDialog({ stocks, queryClient }: { stocks: StockData[]; queryCli
           {tab === "upload" && (
             <div className="space-y-4">
               <Button variant="outline" size="sm" className="w-full" onClick={() => downloadStockTemplate()}>
-                <Download className="w-4 h-4 me-2" /> {t("common.downloadTemplate")}
+                <ExcelIcon className="me-2 size-4" /> {t("common.downloadTemplate")}
               </Button>
               <div className="space-y-2">
                 <Label className="text-xs uppercase font-mono">{t("stocks.targetStock")}</Label>
@@ -189,7 +190,7 @@ function BulkStockUploadDialog({ queryClient }: { queryClient: ReturnType<typeof
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setResult(null); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="cdp-upload"><Upload className="w-4 h-4 me-2" /> {t("stocks.bulkUploadBtn")}</Button>
+        <Button variant="outline" className="cdp-upload"><ExcelIcon className="me-2 size-4" /> {t("stocks.bulkUploadBtn")}</Button>
       </DialogTrigger>
       <DialogContent className="cdp-modal sm:max-w-[480px]">
         <DialogHeader>
@@ -198,14 +199,14 @@ function BulkStockUploadDialog({ queryClient }: { queryClient: ReturnType<typeof
         </DialogHeader>
         <div className="space-y-4 py-2">
           <Button variant="outline" size="sm" className="w-full" onClick={() => downloadBulkStockTemplate()}>
-            <Download className="w-4 h-4 me-2" /> {t("common.downloadTemplate")}
+            <ExcelIcon className="me-2 size-4" /> {t("common.downloadTemplate")}
           </Button>
           <div className="space-y-2">
             <Label className="text-xs uppercase font-mono">{t("stocks.excelFile")}</Label>
             <Input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
           </div>
           <Button className="w-full" onClick={() => uploadMut.mutate()} disabled={!uploadFile || uploadMut.isPending}>
-            {uploadMut.isPending ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Upload className="w-4 h-4 me-2" />}
+            {uploadMut.isPending ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <ExcelIcon className="me-2 size-4" />}
             {t("stocks.uploadProcess")}
           </Button>
           {uploadMut.isError && <p className="text-sm text-rose-500 font-mono">{(uploadMut.error as Error).message}</p>}

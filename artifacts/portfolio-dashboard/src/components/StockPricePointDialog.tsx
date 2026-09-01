@@ -16,7 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/phase1/DatePicker";
 import { UploadConflictPreviewDialog, type ConflictDecision } from "@/components/UploadConflictPreviewDialog";
-import { Loader2, Upload, Download } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
 
 export function StockPricePointDialog({
   open,
@@ -211,7 +212,7 @@ export function StockExcelUploadButton({
         onChange={(e) => onFile(e.target.files?.[0] || null)}
       />
       <Button variant={variant} size={size} className={className} disabled={busy} onClick={() => fileRef.current?.click()}>
-        {busy ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Upload className="w-4 h-4 me-2" />}
+        {busy ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
         {resolvedLabel}
       </Button>
       {error && <p className="text-xs text-rose-500 font-mono w-full">{error}</p>}
@@ -238,7 +239,7 @@ export function StockTemplateDownloadButton() {
   const { t } = useTranslation();
   return (
     <Button type="button" variant="ghost" size="sm" onClick={() => downloadStockTemplate()}>
-      <Download className="w-4 h-4 me-2" /> {t("dialogs.stockPricePoint.template")}
+      <ExcelIcon className="me-2 size-4" /> {t("dialogs.stockPricePoint.template")}
     </Button>
   );
 }

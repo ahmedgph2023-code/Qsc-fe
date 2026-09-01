@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Redirect } from "wouter";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, FileSpreadsheet, Loader2, Pencil, Plus, Upload } from "lucide-react";
+import { Eye, Loader2, Pencil, Plus } from "lucide-react";
+import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
 import { Shell } from "@/components/layout/Shell";
 import { EmptyState } from "@/components/phase1/PageHeader";
 import { CDP_TAB, CdpTabsList } from "@/components/phase1/CdpTabs";
@@ -145,7 +146,7 @@ function WorkbookPicker({
       />
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" className="cdp-add shrink-0" onClick={() => inputRef.current?.click()}>
-          <Upload className="me-2 h-4 w-4" />
+          <ExcelIcon className="me-2 size-4" />
           {file ? t("historicalImport.changeFile") : t("historicalImport.chooseFile")}
         </Button>
         <p className="min-w-0 flex-1 truncate text-start text-sm font-medium text-[#2b3d67]">
@@ -656,7 +657,7 @@ export default function HistoricalImport() {
                     validateMut.mutate();
                   }}
                 >
-                  {validateMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="me-2 h-4 w-4" />}
+                  {validateMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                   {t("historicalImport.nextReview")}
                 </Button>
               </div>
@@ -777,7 +778,7 @@ export default function HistoricalImport() {
                 </Button>
                 {needsFilePreview ? (
                   <Button className="cdp-add" disabled={!canCommit || commitMut.isPending} onClick={() => commitMut.mutate()}>
-                    {commitMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Upload className="me-2 h-4 w-4" />}
+                    {commitMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                     {t("historicalImport.commitClientFiles")}
                   </Button>
                 ) : customerId ? (
@@ -833,11 +834,11 @@ export default function HistoricalImport() {
               </label>
               <div className="cdp-actions">
                 <Button className="cdp-ghost-action" variant="outline" disabled={!marketFile || marketValidateMut.isPending} onClick={() => marketValidateMut.mutate()}>
-                  {marketValidateMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="me-2 h-4 w-4" />}
+                  {marketValidateMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                   {t("historicalImport.validateKeys")}
                 </Button>
                 <Button className="cdp-add" disabled={!marketFile || !marketPreview?.valid || marketCommitMut.isPending} onClick={() => marketCommitMut.mutate()}>
-                  {marketCommitMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Upload className="me-2 h-4 w-4" />}
+                  {marketCommitMut.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <ExcelIcon className="me-2 size-4" />}
                   {t("historicalImport.commitDb")}
                 </Button>
               </div>

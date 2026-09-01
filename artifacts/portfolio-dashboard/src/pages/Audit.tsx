@@ -89,7 +89,7 @@ export function AuditPanel({ showHeader = true }: { showHeader?: boolean }) {
           },
           {
             id: "events",
-            icon: "/documents.png",
+            icon: "/file.png",
             label: t("audit.visibleEvents"),
             value: <AnimatedNumber value={logs.length} format="integer" />,
             hint: "",
