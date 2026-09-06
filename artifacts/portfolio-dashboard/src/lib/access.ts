@@ -81,6 +81,8 @@ export const ROUTE_ACCESS: Record<string, NavAccess> = {
   "/data-import": { superAdminOnly: true },
   "/system-config": { superAdminOnly: true },
   "/users": { roles: ["admin"] },
+  "/settings": { roles: ["admin", "pm"] },
+  "/whatsapp": { roles: ["admin", "pm"] },
 };
 
 function normalizeRole(role?: string | null): AppRole {

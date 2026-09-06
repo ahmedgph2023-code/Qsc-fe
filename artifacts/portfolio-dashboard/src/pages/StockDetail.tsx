@@ -38,6 +38,7 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StockPricePointDialog, StockExcelUploadButton } from "@/components/StockPricePointDialog";
 import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
+import { useStoredPageSize } from "@/lib/tablePageSize";
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
 import {
@@ -453,7 +454,7 @@ export default function StockDetail() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(CLIENT_PAGE_SIZES[0]);
+  const [pageSize, setPageSize] = useStoredPageSize(CLIENT_PAGE_SIZES, CLIENT_PAGE_SIZES[0]);
   const [exporting, setExporting] = useState<"filtered" | "all" | null>(null);
   const [pointDialogOpen, setPointDialogOpen] = useState(false);
   const [editingPoint, setEditingPoint] = useState<StockPricePoint | null>(null);

@@ -521,6 +521,8 @@ export type ExtClientListRow = {
   navValue: number | null;
   totalInvested: number | null;
   returnPct: number | null;
+  email?: string | null;
+  mobile?: string | null;
 };
 
 export type ExtShareLedgerRow = {
@@ -676,21 +678,46 @@ function statementRangeQuery(from: string, to: string) {
   return `?${q.toString()}`;
 }
 
-export function getPortfolioStatement(id: string, asOf?: string): Promise<PortfolioStatement> {
-  const q = asOf ? `?asOf=${encodeURIComponent(asOf)}` : "";
-  return fetchApi(`/ext/clients/${encodeURIComponent(id)}/statements/portfolio${q}`);
+export function getPortfolioStatement(
+  id: string,
+  asOf?: string,
+  opts?: { includeZeroQty?: boolean },
+): Promise<PortfolioStatement> {
+  const q = new URLSearchParams();
+  if (asOf) q.set("asOf", asOf);
+  if (opts?.includeZeroQty) q.set("includeZeroQty", "1");
+  const qs = q.toString();
+  return fetchApi(`/ext/clients/${encodeURIComponent(id)}/statements/portfolio${qs ? `?${qs}` : ""}`);
 }
 
-export function getAccountStatement(id: string, from: string, to: string): Promise<AccountStatement> {
-  return fetchApi(`/ext/clients/${encodeURIComponent(id)}/statements/account${statementRangeQuery(from, to)}`);
+export function getAccountStatement(
+  id: string,
+  from: string,
+  to: string,
+  layout?: "grouped" | "detailed",
+): Promise<AccountStatement> {
+  const q = new URLSearchParams();
+  q.set("from", from);
+  q.set("to", to);
+  if (layout) q.set("layout", layout);
+  return fetchApi(`/ext/clients/${encodeURIComponent(id)}/statements/account?${q.toString()}`);
 }
 
 export function getRealizedSummaryStatement(id: string, from: string, to: string): Promise<RealizedSummaryStatement> {
   return fetchApi(`/ext/clients/${encodeURIComponent(id)}/statements/realized-summary${statementRangeQuery(from, to)}`);
 }
 
-export function getRealizedDetailsStatement(id: string, from: string, to: string): Promise<RealizedDetailsStatement> {
-  return fetchApi(`/ext/clients/${encodeURIComponent(id)}/statements/realized-details${statementRangeQuery(from, to)}`);
+export function getRealizedDetailsStatement(
+  id: string,
+  from: string,
+  to: string,
+  ticker?: string,
+): Promise<RealizedDetailsStatement> {
+  const q = new URLSearchParams();
+  q.set("from", from);
+  q.set("to", to);
+  if (ticker?.trim()) q.set("ticker", ticker.trim());
+  return fetchApi(`/ext/clients/${encodeURIComponent(id)}/statements/realized-details?${q.toString()}`);
 }
 
 const STATEMENT_XLSX: Record<string, string> = {
@@ -703,14 +730,24 @@ const STATEMENT_XLSX: Record<string, string> = {
 export async function downloadStatementExcel(
   id: string,
   kind: "portfolio" | "account" | "realized_summary" | "realized_details",
-  dates: { asOf?: string; from?: string; to?: string },
+  dates: {
+    asOf?: string;
+    from?: string;
+    to?: string;
+    accountLayout?: "grouped" | "detailed";
+    ticker?: string;
+    includeZeroQty?: boolean;
+  },
 ) {
   const q = new URLSearchParams();
   if (kind === "portfolio") {
     if (dates.asOf) q.set("asOf", dates.asOf);
+    if (dates.includeZeroQty) q.set("includeZeroQty", "1");
   } else {
     if (dates.from) q.set("from", dates.from);
     if (dates.to) q.set("to", dates.to);
+    if (kind === "account" && dates.accountLayout) q.set("layout", dates.accountLayout);
+    if (kind === "realized_details" && dates.ticker?.trim()) q.set("ticker", dates.ticker.trim());
   }
   const qs = q.toString();
   const res = await fetch(
@@ -2231,5 +2268,654 @@ export function updateUser(
 
 export function deleteUser(id: string): Promise<{ ok: boolean }> {
   return fetchApi(`/users/${id}`, { method: "DELETE" });
+}
+
+// ── Client report settings ─────────────────────────────────────────────────
+
+export type ClientReportSection =
+  | "portfolio_statement"
+  | "account_statement"
+  | "realized_summary"
+  | "realized_details"
+  | "balance_snapshot"
+  | "transactions"
+  | "performance";
+
+export type ClientReportConfig = {
+  id: string;
+  extClientId: number;
+  clientName: string | null;
+  enabled: boolean;
+  recipientEmail: string | null;
+  recipientPhone?: string | null;
+  dataSections: ClientReportSection[];
+  frequencyType: "daily" | "custom";
+  customDays: number[];
+  sendTime: string;
+  asOfMode: "latest" | "previous_trading_day";
+  rangeDays: number;
+  lastSentAt: string | null;
+  nextScheduledAt: string | null;
+  reportSummary?: string;
+  frequencyLabel?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type ClientReportPayload = {
+  title: string;
+  generatedAt: string;
+  asOf: string;
+  from: string;
+  to: string;
+  client: { id: number; name: string; email: string | null; phone: string | null };
+  sections: Partial<Record<ClientReportSection, unknown>>;
+  sectionLabels: Record<ClientReportSection, string>;
+};
+
+export type ClientReportDeliveryConfig = {
+  email: {
+    enabled: boolean;
+    smtpHost: string;
+    smtpPort: number;
+    smtpUser: string;
+    smtpFrom: string;
+    smtpSecure: boolean;
+    /** Send only when user types a new password; blank keeps previous. */
+    smtpPassword?: string;
+    smtpPasswordSet?: boolean;
+  };
+  linkDevice: {
+    enabled: boolean;
+    status: "disconnected" | "pending" | "connected";
+    sessionLabel: string | null;
+  };
+  metaWhatsapp: {
+    enabled: boolean;
+    configId: string | null;
+    templateName: string | null;
+  };
+  wassenger: {
+    enabled: boolean;
+    apiUrl: string;
+    /** Send only when user types a new token; blank keeps previous. */
+    apiToken?: string;
+    apiTokenSet?: boolean;
+  };
+};
+
+export type ClientReportDeliveryStatus = {
+  email: ClientReportDeliveryConfig["email"] & { ready: boolean; configured: boolean };
+  linkDevice: ClientReportDeliveryConfig["linkDevice"] & { ready: boolean };
+  metaWhatsapp: ClientReportDeliveryConfig["metaWhatsapp"] & {
+    ready: boolean;
+    accountLabel: string | null;
+    connectionStatus: string | null;
+  };
+  wassenger: ClientReportDeliveryConfig["wassenger"] & {
+    ready: boolean;
+    configured: boolean;
+  };
+};
+
+export type ClientReportGlobalConfig = {
+  schedulingEnabled: boolean;
+  dataSections: ClientReportSection[];
+  frequencyType: "daily" | "custom";
+  customDays: number[];
+  sendTime: string;
+  asOfMode: "latest" | "previous_trading_day";
+  rangeDays: number;
+  deliveryConfig: ClientReportDeliveryConfig;
+  updatedAt?: string | null;
+};
+
+export type ClientReportBoardRow = {
+  configId: string | null;
+  extClientId: number;
+  clientName: string;
+  enabled: boolean;
+  usesGlobalSections: boolean;
+  recipientEmail: string | null;
+  recipientPhone: string | null;
+  sourceEmail: string | null;
+  sourcePhone: string | null;
+  effectiveEmail: string | null;
+  effectivePhone: string | null;
+  hasEmail: boolean;
+  hasPhone: boolean;
+  effectiveSections: ClientReportSection[];
+  reportSummary: string;
+  frequencyLabel: string;
+  sendTime: string;
+  nextScheduledAt: string | null;
+  lastSentAt: string | null;
+};
+
+export function listClientReportBoard(): Promise<{
+  global: ClientReportGlobalConfig;
+  clients: ClientReportBoardRow[];
+  deliveryStatus: ClientReportDeliveryStatus;
+  clientsLoadError?: string | null;
+}> {
+  return fetchApi("/client-reports");
+}
+
+export function updateClientReportDeliveryConfig(body: ClientReportDeliveryConfig): Promise<{
+  global: ClientReportGlobalConfig;
+  deliveryStatus: ClientReportDeliveryStatus;
+}> {
+  return fetchApi("/client-reports/delivery", { method: "PUT", body: JSON.stringify(body) });
+}
+
+export type LinkDeviceSession = {
+  status: "disconnected" | "connecting" | "qr_pending" | "connected" | "error";
+  qrDataUrl: string | null;
+  sessionLabel: string;
+  phoneNumber: string | null;
+  error: string | null;
+  updatedAt: string;
+};
+
+export function getLinkDeviceSession(): Promise<LinkDeviceSession> {
+  return fetchApi("/client-reports/delivery/link-device");
+}
+
+export function startLinkDeviceSession(sessionLabel?: string | null): Promise<LinkDeviceSession> {
+  return fetchApi("/client-reports/delivery/link-device/start", {
+    method: "POST",
+    body: JSON.stringify({ sessionLabel: sessionLabel ?? null }),
+  });
+}
+
+export function disconnectLinkDeviceSession(): Promise<LinkDeviceSession> {
+  return fetchApi("/client-reports/delivery/link-device/disconnect", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function getGlobalClientReportConfig(): Promise<ClientReportGlobalConfig> {
+  return fetchApi("/client-reports/global");
+}
+
+export function updateGlobalClientReportConfig(body: Partial<ClientReportGlobalConfig>): Promise<ClientReportGlobalConfig> {
+  return fetchApi("/client-reports/global", { method: "PUT", body: JSON.stringify(body) });
+}
+
+export function toggleClientReportByExtId(extClientId: number, enabled: boolean): Promise<ClientReportConfig> {
+  return fetchApi(`/client-reports/clients/${extClientId}/toggle`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export function previewClientReportByExtId(extClientId: number): Promise<ClientReportPayload> {
+  return fetchApi(`/client-reports/clients/${extClientId}/preview`);
+}
+
+export function sendClientReportByExtId(extClientId: number): Promise<{
+  status: string;
+  payload: ClientReportPayload;
+  deliveryNote?: string;
+  delivered?: boolean;
+  deliveryResults?: Array<{ channel: string; delivered: boolean; note: string }>;
+  logId: string;
+}> {
+  return fetchApi(`/client-reports/clients/${extClientId}/send`, { method: "POST", body: JSON.stringify({}) });
+}
+
+/** @deprecated use listClientReportBoard */
+export function listClientReportConfigs(): Promise<{ configs: ClientReportConfig[] }> {
+  return listClientReportBoard().then(({ global, clients }) => ({
+    configs: clients.map((c) => ({
+      id: c.configId ?? "",
+      extClientId: c.extClientId,
+      clientName: c.clientName,
+      enabled: c.enabled,
+      recipientEmail: c.recipientEmail,
+      dataSections: c.effectiveSections,
+      frequencyType: global.frequencyType,
+      customDays: global.customDays,
+      sendTime: global.sendTime,
+      asOfMode: global.asOfMode,
+      rangeDays: global.rangeDays,
+      lastSentAt: c.lastSentAt,
+      nextScheduledAt: c.nextScheduledAt,
+      reportSummary: c.reportSummary,
+      frequencyLabel: c.frequencyLabel,
+    })),
+  }));
+}
+
+export function getClientReportSections(): Promise<{ sections: ClientReportSection[] }> {
+  return fetchApi("/client-reports/sections");
+}
+
+export function createClientReportConfig(body: {
+  extClientId: number;
+  clientName?: string;
+  enabled?: boolean;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
+  dataSections: ClientReportSection[];
+  frequencyType?: "daily" | "custom";
+  customDays?: number[];
+  sendTime?: string;
+  asOfMode?: "latest" | "previous_trading_day";
+  rangeDays?: number;
+}): Promise<ClientReportConfig> {
+  return fetchApi("/client-reports", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function updateClientReportConfig(
+  id: string,
+  body: Partial<{
+    clientName: string;
+    enabled: boolean;
+    recipientEmail: string | null;
+    recipientPhone: string | null;
+    dataSections: ClientReportSection[];
+    frequencyType: "daily" | "custom";
+    customDays: number[];
+    sendTime: string;
+    asOfMode: "latest" | "previous_trading_day";
+    rangeDays: number;
+  }>,
+): Promise<ClientReportConfig> {
+  return fetchApi(`/client-reports/${id}`, { method: "PUT", body: JSON.stringify(body) });
+}
+
+export function deleteClientReportConfig(id: string): Promise<{ ok: boolean }> {
+  return fetchApi(`/client-reports/${id}`, { method: "DELETE" });
+}
+
+export function toggleClientReportConfig(id: string, enabled: boolean): Promise<ClientReportConfig> {
+  return fetchApi(`/client-reports/${id}/toggle`, { method: "PATCH", body: JSON.stringify({ enabled }) });
+}
+
+export function previewClientReport(id: string): Promise<ClientReportPayload> {
+  return fetchApi(`/client-reports/${id}/preview`);
+}
+
+export function sendClientReportNow(id: string): Promise<{
+  status: string;
+  payload: ClientReportPayload;
+  deliveryNote?: string;
+  logId: string;
+}> {
+  return fetchApi(`/client-reports/${id}/send`, { method: "POST", body: JSON.stringify({}) });
+}
+
+// —— Meta WhatsApp ——
+
+export type WhatsAppAccountStatus = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  phoneNumberId: string | null;
+  wabaId: string | null;
+  displayPhoneNumber: string | null;
+  connectionStatus: string;
+  lastValidatedAt: string | null;
+  lastError: string | null;
+  webhookPath: string;
+  webhookCallbackUrl: string;
+  webhookUrlHint: string;
+  verifyToken: string | null;
+  accessToken: string | null;
+  appSecret: string | null;
+  hasAccessToken: boolean;
+  accessTokenHint: string | null;
+  hasAppSecret: boolean;
+  appSecretHint: string | null;
+  hasVerifyToken: boolean;
+  verifyTokenHint: string | null;
+  graphApiVersion: string;
+  updatedAt: string | null;
+};
+
+export type WhatsAppConversation = {
+  id: string;
+  configId: string;
+  waId: string;
+  displayName: string | null;
+  businessName: string | null;
+  lastMessagePreview: string | null;
+  lastMessageAt: string | null;
+  lastInboundAt: string | null;
+  unreadCount: number;
+  isFavorite: boolean;
+  withinCustomerCareWindow: boolean;
+  customerCareExpiresAt: string | null;
+};
+
+export type WhatsAppMessage = {
+  id: string;
+  conversationId: string;
+  direction: "inbound" | "outbound";
+  messageType: string;
+  body: string | null;
+  templateName: string | null;
+  templateLanguage: string | null;
+  wamid: string | null;
+  status: string;
+  errorMessage: string | null;
+  mediaUrl: string | null;
+  hasMedia: boolean;
+  createdAt: string;
+};
+
+export type WhatsAppTemplate = {
+  id: string;
+  name: string;
+  language: string;
+  status: string;
+  category: string;
+  components: unknown[];
+};
+
+export type WhatsAppSyncCapability = {
+  key: string;
+  available: boolean;
+  reason: string;
+};
+
+export type WhatsAppSyncReport = {
+  ok: boolean;
+  pulled: {
+    phone: {
+      phoneNumberId: string;
+      displayPhoneNumber: string | null;
+      verifiedName: string | null;
+      qualityRating: string | null;
+      wabaId: string | null;
+      wabaName: string | null;
+    } | null;
+    templates: { count: number };
+    businessProfile: Record<string, unknown> | null;
+    webhookSubscription: { subscribed: boolean; apps: unknown[]; error: string | null };
+  };
+  local: { conversations: number; messages: number };
+  history: {
+    availableViaGraphPull: false;
+    webhookMaxDays: number;
+    webhookMediaDays: number;
+    lastChunk: unknown;
+    lastDecline: unknown;
+    note: string;
+  };
+  can: WhatsAppSyncCapability[];
+  cannot: WhatsAppSyncCapability[];
+};
+
+export type WhatsAppWebhookImportResult = {
+  ok: boolean;
+  envelopes: number;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  contacts: number;
+  declines: number;
+  local: { conversations: number; messages: number };
+};
+
+function waQuery(configId: string, extra?: Record<string, string | number | undefined>) {
+  const params = new URLSearchParams({ configId });
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      if (v != null && v !== "") params.set(k, String(v));
+    }
+  }
+  return params.toString();
+}
+
+export function listWhatsAppAccounts(): Promise<{ accounts: WhatsAppAccountStatus[] }> {
+  return fetchApi("/whatsapp/accounts");
+}
+
+export function createWhatsAppAccount(label: string): Promise<WhatsAppAccountStatus> {
+  return fetchApi("/whatsapp/accounts", { method: "POST", body: JSON.stringify({ label }) });
+}
+
+export function deleteWhatsAppAccount(id: string): Promise<{ ok: boolean }> {
+  return fetchApi(`/whatsapp/accounts/${id}`, { method: "DELETE" });
+}
+
+export function getWhatsAppStatus(configId: string): Promise<WhatsAppAccountStatus> {
+  return fetchApi(`/whatsapp/status?${waQuery(configId)}`);
+}
+
+export function saveWhatsAppConfig(
+  configId: string,
+  body: Partial<{
+    label: string;
+    accessToken: string;
+    appSecret: string;
+    verifyToken: string;
+    phoneNumberId: string;
+    wabaId: string;
+    enabled: boolean;
+  }>,
+): Promise<WhatsAppAccountStatus> {
+  return fetchApi(`/whatsapp/config?${waQuery(configId)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export function validateWhatsAppConfig(configId: string): Promise<WhatsAppAccountStatus> {
+  return fetchApi(`/whatsapp/config/validate?${waQuery(configId)}`, { method: "POST", body: "{}" });
+}
+
+export function syncWhatsAppFromMeta(configId: string): Promise<WhatsAppSyncReport> {
+  return fetchApi(`/whatsapp/sync?${waQuery(configId)}`, { method: "POST", body: "{}" });
+}
+
+export function importWhatsAppWebhookDump(configId: string, file: File): Promise<WhatsAppWebhookImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  return fetchApi(`/whatsapp/sync/import-webhooks?${waQuery(configId)}`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function setWhatsAppEnabled(configId: string, enabled: boolean): Promise<WhatsAppAccountStatus> {
+  return fetchApi(`/whatsapp/config/enable?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export function listWhatsAppTemplates(configId: string): Promise<{ templates: WhatsAppTemplate[] }> {
+  return fetchApi(`/whatsapp/templates?${waQuery(configId)}`);
+}
+
+export function listWhatsAppConversations(
+  configId: string,
+  params?: { q?: string; filter?: string; limit?: number },
+): Promise<{ conversations: WhatsAppConversation[] }> {
+  return fetchApi(`/whatsapp/conversations?${waQuery(configId, params)}`);
+}
+
+export function listWhatsAppMessages(
+  configId: string,
+  conversationId: string,
+  limit = 50,
+): Promise<{ messages: WhatsAppMessage[] }> {
+  return fetchApi(`/whatsapp/conversations/${conversationId}/messages?${waQuery(configId, { limit })}`);
+}
+
+export function markWhatsAppConversationRead(
+  configId: string,
+  conversationId: string,
+): Promise<WhatsAppConversation> {
+  return fetchApi(`/whatsapp/conversations/${conversationId}/read?${waQuery(configId)}`, {
+    method: "POST",
+    body: "{}",
+  });
+}
+
+export function openWhatsAppPhone(
+  configId: string,
+  phone: string,
+  displayName?: string,
+): Promise<WhatsAppConversation & { messageCount: number }> {
+  return fetchApi(`/whatsapp/conversations/open-phone?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify({ phone, displayName }),
+  });
+}
+
+export type WhatsAppPhoneImportRow = {
+  row: number;
+  phone: string;
+  displayName: string;
+  waId: string | null;
+  ok: boolean;
+  error: string | null;
+};
+
+export async function downloadWhatsAppPhoneTemplate() {
+  const res = await fetch(`${API_BASE}/whatsapp/conversations/phone-template`, {
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+  });
+  if (!res.ok) throw new Error("Download failed");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "whatsapp-phones-template.xlsx";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function previewWhatsAppPhoneImport(file: File): Promise<{ rows: WhatsAppPhoneImportRow[] }> {
+  const form = new FormData();
+  form.append("file", file);
+  return fetchApi("/whatsapp/conversations/phone-import/preview", {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function sendWhatsAppText(
+  configId: string,
+  body: { conversationId?: string; phone?: string; text: string; displayName?: string },
+): Promise<WhatsAppMessage> {
+  return fetchApi(`/whatsapp/messages/text?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function sendWhatsAppTemplate(
+  configId: string,
+  body: {
+    conversationId?: string;
+    phone?: string;
+    templateName: string;
+    language?: string;
+    components?: unknown[];
+    displayName?: string;
+  },
+): Promise<WhatsAppMessage> {
+  return fetchApi(`/whatsapp/messages/template?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function sendWhatsAppMedia(
+  configId: string,
+  body: { conversationId?: string; phone?: string; file: File; caption?: string; asVoice?: boolean },
+): Promise<WhatsAppMessage> {
+  const form = new FormData();
+  if (body.conversationId) form.append("conversationId", body.conversationId);
+  if (body.phone) form.append("phone", body.phone);
+  if (body.caption) form.append("caption", body.caption);
+  if (body.asVoice) form.append("asVoice", "true");
+  form.append("file", body.file);
+  return fetchApi(`/whatsapp/messages/media?${waQuery(configId)}`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function getWhatsAppUsage(configId: string) {
+  return fetchApi(`/whatsapp/usage?${waQuery(configId)}`);
+}
+
+export function listWhatsAppQuickReplies(configId: string): Promise<{ replies: Array<{ id: string; title: string; body: string }> }> {
+  return fetchApi(`/whatsapp/quick-replies?${waQuery(configId)}`);
+}
+
+export function createWhatsAppQuickReply(
+  configId: string,
+  body: { title: string; body: string },
+) {
+  return fetchApi(`/whatsapp/quick-replies?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateWhatsAppQuickReply(
+  configId: string,
+  id: string,
+  body: { title?: string; body?: string },
+) {
+  return fetchApi(`/whatsapp/quick-replies/${id}?${waQuery(configId)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteWhatsAppQuickReply(configId: string, id: string) {
+  return fetchApi(`/whatsapp/quick-replies/${id}?${waQuery(configId)}`, { method: "DELETE" });
+}
+
+export function createWhatsAppTemplate(configId: string, body: Record<string, unknown>) {
+  return fetchApi(`/whatsapp/templates?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateWhatsAppTemplate(configId: string, templateId: string, body: Record<string, unknown>) {
+  return fetchApi(`/whatsapp/templates/${encodeURIComponent(templateId)}?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteWhatsAppTemplate(configId: string, body: { name: string; hsmId?: string }) {
+  return fetchApi(`/whatsapp/templates?${waQuery(configId, { name: body.name, hsmId: body.hsmId })}`, {
+    method: "DELETE",
+  });
+}
+
+export function listWhatsAppTemplateLibrary(
+  configId: string,
+  params?: { search?: string; language?: string },
+) {
+  return fetchApi(`/whatsapp/templates/library?${waQuery(configId, params)}`);
+}
+
+export function createWhatsAppTemplateFromLibrary(configId: string, body: Record<string, unknown>) {
+  return fetchApi(`/whatsapp/templates/from-library?${waQuery(configId)}`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function uploadWhatsAppTemplateHeader(configId: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return fetchApi(`/whatsapp/templates/header?${waQuery(configId)}`, {
+    method: "POST",
+    body: form,
+  }) as Promise<{ headerHandle: string }>;
 }
 

@@ -48,6 +48,8 @@ import AiAssistantPage, {
 } from "@/pages/Phase4Advanced";
 import SystemConfig from "@/pages/SystemConfig";
 import UsersAdmin from "@/pages/UsersAdmin";
+import Settings from "@/pages/Settings";
+import WhatsApp from "@/pages/WhatsApp";
 
 const queryClient = new QueryClient();
 
@@ -118,6 +120,8 @@ function Router() {
       <Route path="/frontier" component={() => <ProtectedRoute path="/frontier" component={FrontierPage} />} />
       <Route path="/system-config" component={() => <ProtectedRoute path="/system-config" component={SystemConfig} />} />
       <Route path="/users" component={() => <ProtectedRoute path="/users" component={UsersAdmin} />} />
+      <Route path="/settings" component={() => <ProtectedRoute path="/settings" component={Settings} />} />
+      <Route path="/whatsapp" component={() => <ProtectedRoute path="/whatsapp" component={WhatsApp} />} />
       <Route component={NotFound} />
     </Switch>
   );

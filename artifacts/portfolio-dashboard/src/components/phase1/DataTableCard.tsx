@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Filter, Inbox, Search } from "lucide-react";
 import { Table, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
@@ -6,6 +6,7 @@ import { SourceHint } from "@/components/phase1/SourceHint";
 import { TableSkeletonRows } from "@/components/phase1/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SHELL_ACTION_ICON, SHELL_CIRCLE, SHELL_CIRCLE_OPEN } from "@/components/layout/shellChrome";
+import { readStoredPageSize, writeStoredPageSize } from "@/lib/tablePageSize";
 import { cn } from "@/lib/utils";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -59,14 +60,24 @@ export const CLIENT_PAGE_SIZES = [10, 25, 50];
 
 export function useClientTablePage<T>(items: T[], resetKey = "") {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(CLIENT_PAGE_SIZES[0]);
+  const [pageSize, setPageSizeState] = useState(() =>
+    readStoredPageSize(CLIENT_PAGE_SIZES, CLIENT_PAGE_SIZES[0]),
+  );
+  const setPageSize = useCallback((size: number) => {
+    setPageSizeState(size);
+    writeStoredPageSize(size);
+  }, []);
   const total = items.length;
   const pageCount = Math.max(1, Math.ceil(Math.max(0, total) / pageSize));
   const safePage = Math.min(Math.max(1, page), pageCount);
 
   useEffect(() => {
     setPage(1);
-  }, [resetKey, pageSize]);
+  }, [resetKey]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AnimatedNumber } from "@/components/phase1/AnimatedNumber";
+import { SelectField } from "@/components/phase1/SelectField";
 import { StatsSummaryBar, type StatsSummaryItem } from "@/components/phase1/StatsSummaryBar";
 import { useClientTablePage } from "@/components/phase1/DataTableCard";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
@@ -43,6 +44,12 @@ export function formatQar(value: number | null | undefined) {
 export function formatStatementAmount(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return "—";
   return new Intl.NumberFormat("en-QA", { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value);
+}
+
+/** Portfolio quantities — whole shares, no fraction digits. */
+export function formatQty(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return "—";
+  return new Intl.NumberFormat("en-QA", { maximumFractionDigits: 0 }).format(value);
 }
 
 function signedClass(value: number | null | undefined) {
@@ -82,9 +89,10 @@ function Num({
   value: number | null | undefined;
   className?: string;
   signed?: boolean;
-  decimals?: 2 | 3;
+  decimals?: 0 | 2 | 3;
 }) {
-  const formatted = decimals === 3 ? formatStatementAmount(value) : formatQar(value);
+  const formatted =
+    decimals === 0 ? formatQty(value) : decimals === 3 ? formatStatementAmount(value) : formatQar(value);
   return (
     <bdi dir="ltr" className={cn("font-data tabular-nums", signed && signedClass(value), className)}>
       {formatted}
@@ -348,7 +356,7 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
                       {line.compId ?? "—"}
                     </TableCell>
                     <TableCell className="px-3.5 text-end font-semibold tabular-nums" style={cellPy}>
-                      <Num value={line.quantity} decimals={3} />
+                      <Num value={line.quantity} decimals={0} />
                     </TableCell>
                     <TableCell className="px-3.5 text-end font-bold text-[#e04444]" style={cellPy}>
                       <Num value={line.costValue} decimals={3} className="font-bold text-[#e04444]" />
@@ -388,7 +396,7 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
                 </span>
               </TableCell>
               <TableCell className="px-3.5 text-end text-[13px] font-bold tabular-nums text-white" style={cellPy}>
-                <Num value={grandQty} decimals={3} className="text-white" />
+                <Num value={grandQty} decimals={0} className="text-white" />
               </TableCell>
               <TableCell className="px-3.5 text-end text-[14px] font-extrabold text-[#ffb4a8]" style={cellPy}>
                 <Num value={stmt.grandTotalCost} decimals={3} className="font-extrabold text-[#ffb4a8]" />
@@ -437,12 +445,14 @@ function AccountPreview({ stmt }: { stmt: AccountStatement }) {
         })}
       </p>
       <StatementTableShell footer={pagingFooter(paging)}>
-        <Table className="min-w-[64rem] table-fixed border-separate border-spacing-0" wrapClassName={TABLE_WRAP}>
+        <Table className="min-w-[72rem] table-fixed border-separate border-spacing-0" wrapClassName={TABLE_WRAP}>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className={cn(thClass, "w-[7.5rem]")}>{t("statements.col.postDate")}</TableHead>
               <TableHead className={cn(thClass, "w-[8.5rem]")}>{t("statements.col.transType")}</TableHead>
               <TableHead className={thClass}>{t("statements.col.description")}</TableHead>
+              <TableHead className={cn(thClass, "w-28 text-end")}>{t("common.qty")}</TableHead>
+              <TableHead className={cn(thClass, "w-28 text-end")}>{t("statements.col.avgPrice")}</TableHead>
               <TableHead className={cn(thClass, "w-32 text-end")}>{t("statements.col.debit")}</TableHead>
               <TableHead className={cn(thClass, "w-32 text-end")}>{t("statements.col.credit")}</TableHead>
               <TableHead className={cn(thClass, "w-36 text-end")}>{t("statements.col.balance")}</TableHead>
@@ -458,6 +468,12 @@ function AccountPreview({ stmt }: { stmt: AccountStatement }) {
                 <TableCell className="px-3.5 font-data" style={cellPy}>{line.postDate}</TableCell>
                 <TableCell className="px-3.5" style={cellPy}>{line.transType}</TableCell>
                 <TableCell className="px-3.5 font-semibold text-[#17356d]" style={cellPy}>{line.description}</TableCell>
+                <TableCell className="px-3.5 text-end" style={cellPy}>
+                  {line.quantity == null ? <span className={emptyClass}>—</span> : <Num value={line.quantity} decimals={0} />}
+                </TableCell>
+                <TableCell className="px-3.5 text-end" style={cellPy}>
+                  <MoneyText money={line.securityPrice} />
+                </TableCell>
                 <TableCell className="px-3.5 text-end" style={cellPy}><Num value={line.debit} /></TableCell>
                 <TableCell className="px-3.5 text-end" style={cellPy}><Num value={line.credit} /></TableCell>
                 <TableCell className="px-3.5 text-end font-semibold" style={cellPy}><Num value={line.balance} /></TableCell>
@@ -471,7 +487,13 @@ function AccountPreview({ stmt }: { stmt: AccountStatement }) {
   );
 }
 
-function SummaryPreview({ stmt }: { stmt: RealizedSummaryStatement }) {
+function SummaryPreview({
+  stmt,
+  onOpenDetails,
+}: {
+  stmt: RealizedSummaryStatement;
+  onOpenDetails?: (ticker: string) => void;
+}) {
   const { t } = useTranslation();
   const paging = useClientTablePage(
     stmt.lines,
@@ -523,9 +545,20 @@ function SummaryPreview({ stmt }: { stmt: RealizedSummaryStatement }) {
                 </TableCell>
                 <TableCell className="px-3.5 font-semibold text-[#17356d]" style={cellPy}>{line.companyName}</TableCell>
                 <TableCell className="px-3.5" style={cellPy}>
-                  <span className="inline-flex h-6 min-w-12 items-center justify-center rounded-md bg-[#eef4ff] px-2 text-[11px] font-bold text-[#175cd3]">
-                    {line.ticker}
-                  </span>
+                  {onOpenDetails ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenDetails(line.ticker)}
+                      className="inline-flex h-6 min-w-12 items-center justify-center rounded-md bg-[#eef4ff] px-2 text-[11px] font-bold text-[#175cd3] transition-colors hover:bg-[#d9e6ff] hover:underline"
+                      title={t("statements.openDetailsFor", { ticker: line.ticker })}
+                    >
+                      {line.ticker}
+                    </button>
+                  ) : (
+                    <span className="inline-flex h-6 min-w-12 items-center justify-center rounded-md bg-[#eef4ff] px-2 text-[11px] font-bold text-[#175cd3]">
+                      {line.ticker}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="px-3.5 text-end font-semibold" style={cellPy}>
                   <Num value={line.tradingProfit} signed />
@@ -552,11 +585,45 @@ function SummaryPreview({ stmt }: { stmt: RealizedSummaryStatement }) {
   );
 }
 
-function DetailsPreview({ stmt }: { stmt: RealizedDetailsStatement }) {
+function DetailsPreview({
+  stmt,
+  detailsTickerFilter,
+  onDetailsTickerFilter,
+}: {
+  stmt: RealizedDetailsStatement;
+  detailsTickerFilter?: string;
+  onDetailsTickerFilter?: (ticker: string) => void;
+}) {
   const { t } = useTranslation();
+  const tickerFilter = (detailsTickerFilter ?? "").trim();
+
+  const stockOptions = useMemo(() => {
+    const hasSector = stmt.stocks.some((s) => !!(s.sectorName && String(s.sectorName).trim()));
+    const opts = stmt.stocks.map((stock) => {
+      const sector = hasSector
+        ? (stock.sectorName?.trim() || t("statements.sectorAll"))
+        : t("statements.sectorAll");
+      return {
+        value: stock.ticker,
+        label: `${stock.ticker} · ${stock.companyName}`,
+        search: `${stock.ticker} ${stock.companyName} ${sector}`,
+        group: sector,
+      };
+    });
+    return [
+      { value: "", label: t("statements.allTickers"), search: "all", group: t("statements.sectorAll") },
+      ...opts,
+    ];
+  }, [stmt.stocks, t]);
+
+  const filteredStocks = useMemo(() => {
+    if (!tickerFilter) return stmt.stocks;
+    return stmt.stocks.filter((s) => s.ticker === tickerFilter);
+  }, [stmt.stocks, tickerFilter]);
+
   const flat = useMemo(
     () =>
-      stmt.stocks.flatMap((stock) =>
+      filteredStocks.flatMap((stock) =>
         stock.lines.map((line, lineIdx) => ({
           stock,
           line,
@@ -564,15 +631,28 @@ function DetailsPreview({ stmt }: { stmt: RealizedDetailsStatement }) {
           isLast: lineIdx === stock.lines.length - 1,
         })),
       ),
-    [stmt.stocks],
+    [filteredStocks],
   );
   const paging = useClientTablePage(
     flat,
-    `${stmt.investor.accountId}|${stmt.dates.from}|${stmt.dates.to}|${flat.length}`,
+    `${stmt.investor.accountId}|${stmt.dates.from}|${stmt.dates.to}|${tickerFilter}|${flat.length}`,
   );
   const shownTickers = new Set<string>();
   return (
     <div className="p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <SelectField
+          className="h-9 w-auto min-w-fit max-w-[min(100%,20rem)] shrink-0"
+          contentClassName="clients-select-content min-w-[16rem]"
+          value={tickerFilter}
+          onValueChange={(next) => onDetailsTickerFilter?.(next)}
+          options={stockOptions}
+          placeholder={t("statements.filterTicker")}
+          searchPlaceholder={t("statements.searchTicker")}
+          emptyText={t("statements.noTickerMatch")}
+          aria-label={t("statements.filterTicker")}
+        />
+      </div>
       <StatementTableShell footer={pagingFooter(paging)}>
         <Table className="min-w-[64rem] table-fixed border-separate border-spacing-0" wrapClassName={TABLE_WRAP}>
           <TableHeader>
@@ -616,7 +696,7 @@ function DetailsPreview({ stmt }: { stmt: RealizedDetailsStatement }) {
                     <TableCell className="px-3.5 text-end" style={cellPy}><Num value={item.line.buyQty} /></TableCell>
                     <TableCell className="px-3.5 text-end" style={cellPy}><Num value={item.line.sellQty} /></TableCell>
                     <TableCell className="px-3.5 text-end font-semibold" style={cellPy}><Num value={item.line.shareBalance} /></TableCell>
-                    <TableCell className="px-3.5 text-end" style={cellPy}><Num value={item.line.price} /></TableCell>
+                    <TableCell className="px-3.5 text-end" style={cellPy}><Num value={item.line.price} decimals={3} /></TableCell>
                     <TableCell className="px-3.5 text-end font-semibold" style={cellPy}><Num value={item.line.dayResult} signed /></TableCell>
                     <TableCell className="px-3.5 text-end font-semibold" style={cellPy}><Num value={item.line.profitLossCumulative} signed /></TableCell>
                   </TableRow>
@@ -643,11 +723,29 @@ function DetailsPreview({ stmt }: { stmt: RealizedDetailsStatement }) {
   );
 }
 
-export function StatementPreview({ stmt }: { stmt: ClientStatement }) {
+export type StatementPreviewProps = {
+  stmt: ClientStatement;
+  onOpenDetails?: (ticker: string) => void;
+  detailsTickerFilter?: string;
+  onDetailsTickerFilter?: (ticker: string) => void;
+};
+
+export function StatementPreview({
+  stmt,
+  onOpenDetails,
+  detailsTickerFilter,
+  onDetailsTickerFilter,
+}: StatementPreviewProps) {
   if (stmt.kind === "portfolio") return <PortfolioPreview stmt={stmt} />;
   if (stmt.kind === "account") return <AccountPreview stmt={stmt} />;
-  if (stmt.kind === "realized_summary") return <SummaryPreview stmt={stmt} />;
-  return <DetailsPreview stmt={stmt} />;
+  if (stmt.kind === "realized_summary") return <SummaryPreview stmt={stmt} onOpenDetails={onOpenDetails} />;
+  return (
+    <DetailsPreview
+      stmt={stmt}
+      detailsTickerFilter={detailsTickerFilter}
+      onDetailsTickerFilter={onDetailsTickerFilter}
+    />
+  );
 }
 
 function escapeHtml(s: string) {

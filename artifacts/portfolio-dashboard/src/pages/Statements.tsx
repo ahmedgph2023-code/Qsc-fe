@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Inbox, Loader2 } from "lucide-react";
+import { AlertTriangle, Inbox, Loader2 } from "lucide-react";
 import { ExcelIcon, FileIcon, PdfIcon } from "@/components/phase1/ExportFormatIcons";
 import { Shell } from "@/components/layout/Shell";
 import { PageHeader, EmptyState } from "@/components/phase1/PageHeader";
@@ -14,8 +14,8 @@ import { StatementInvestorDialog } from "@/components/statements/StatementInvest
 import { openStatementPrint } from "@/components/statements/statementPrintHtml";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BlockedBoardTable } from "@/components/phase1/BlockedBoardTable";
-import { DataTableIconBtn, DataTableToolbar } from "@/components/phase1/DataTableCard";
+import { Switch } from "@/components/ui/switch";
+import { DataTableToolbar } from "@/components/phase1/DataTableCard";
 import {
   extClientDisplayName,
   getAccountStatement,
@@ -24,77 +24,62 @@ import {
   getRealizedDetailsStatement,
   getRealizedSummaryStatement,
   downloadStatementExcel,
-  getStatementQuestions,
   type ExtClientListRow,
 } from "@/lib/api";
+import { todayQatarIso } from "@/lib/qatarDates";
+import {
+  ensureStatementSearchDefaults,
+  parseStatementFilters,
+  parseStatementKind,
+  statementCanLoad,
+  statementFiltersPath,
+  statementRangeValid,
+  withStatementKind,
+  type StatementFilters,
+  type StatementKind,
+} from "@/lib/statementFilters";
 import type { ClientStatement } from "@/lib/statement-types";
 
-export type StatementKind = "portfolio" | "account" | "realized_summary" | "realized_details";
+export type { StatementKind };
 
-const KINDS: StatementKind[] = ["portfolio", "account", "realized_summary", "realized_details"];
+const FILTER_SELECT = "h-9 w-auto min-w-fit max-w-[min(100%,20rem)] shrink-0";
 
-const todayQatarIso = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Qatar" });
-const yearStartIso = () => `${todayQatarIso().slice(0, 4)}-01-01`;
-
-function parseKind(raw: string | null): StatementKind {
-  return KINDS.includes(raw as StatementKind) ? (raw as StatementKind) : "portfolio";
-}
-
-function readDraftFromUrl() {
-  const q = new URLSearchParams(window.location.search);
-  const today = todayQatarIso();
-  return {
-    clientId: q.get("client") || "",
-    kind: parseKind(q.get("kind")),
-    asOf: q.get("asOf") || today,
-    from: q.get("from") || yearStartIso(),
-    to: q.get("to") || today,
-  };
-}
-
-function statementQuery(draft: ReturnType<typeof readDraftFromUrl>) {
-  const q = new URLSearchParams();
-  if (draft.clientId) q.set("client", draft.clientId);
-  q.set("kind", draft.kind);
-  if (draft.kind === "portfolio") q.set("asOf", draft.asOf);
-  else {
-    q.set("from", draft.from);
-    q.set("to", draft.to);
+async function loadStatement(filters: StatementFilters): Promise<ClientStatement> {
+  const id = filters.clientId;
+  if (filters.kind === "portfolio") {
+    return getPortfolioStatement(id, filters.asOf, { includeZeroQty: filters.includeZeroQty });
   }
-  return `/statements?${q.toString()}`;
-}
-
-async function loadStatement(draft: ReturnType<typeof readDraftFromUrl>): Promise<ClientStatement> {
-  const id = draft.clientId;
-  if (draft.kind === "portfolio") return getPortfolioStatement(id, draft.asOf);
-  if (draft.kind === "account") return getAccountStatement(id, draft.from, draft.to);
-  if (draft.kind === "realized_summary") return getRealizedSummaryStatement(id, draft.from, draft.to);
-  return getRealizedDetailsStatement(id, draft.from, draft.to);
-}
-
-function isDraftApplied(
-  draft: ReturnType<typeof readDraftFromUrl>,
-  applied: ReturnType<typeof readDraftFromUrl> | null,
-) {
-  if (!applied) return false;
-  if (draft.clientId !== applied.clientId || draft.kind !== applied.kind) return false;
-  if (draft.kind === "portfolio") return draft.asOf === applied.asOf;
-  return draft.from === applied.from && draft.to === applied.to;
+  if (filters.kind === "account") {
+    return getAccountStatement(id, filters.from, filters.to, filters.accountLayout);
+  }
+  if (filters.kind === "realized_summary") {
+    return getRealizedSummaryStatement(id, filters.from, filters.to);
+  }
+  return getRealizedDetailsStatement(id, filters.from, filters.to, filters.ticker || undefined);
 }
 
 export default function Statements() {
   const { t, i18n } = useTranslation();
   const [, setLocation] = useLocation();
-  const [draft, setDraft] = useState(readDraftFromUrl);
-  const [applied, setApplied] = useState(() => {
-    const initial = readDraftFromUrl();
-    return initial.clientId ? initial : null;
-  });
+  const search = useSearch();
   const [exporting, setExporting] = useState(false);
 
+  const filters = useMemo(() => parseStatementFilters(search), [search]);
+
+  useEffect(() => {
+    const nextSearch = ensureStatementSearchDefaults(search);
+    if (nextSearch != null) {
+      setLocation(`/statements?${nextSearch}`, { replace: true });
+    }
+  }, [search, setLocation]);
+
+  const navigate = (next: StatementFilters) => {
+    setLocation(statementFiltersPath(next));
+  };
+
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
-    queryKey: ["ext-clients", draft.asOf],
-    queryFn: () => getExtClients(draft.asOf),
+    queryKey: ["ext-clients", filters.asOf],
+    queryFn: () => getExtClients(filters.asOf),
   });
 
   const clientOptions = useMemo(
@@ -107,27 +92,25 @@ export default function Statements() {
     [clients, i18n.language],
   );
 
-  const rangeOk = !!draft.from && !!draft.to && draft.from <= draft.to;
-  const canRun = !!draft.clientId && (draft.kind === "portfolio" ? !!draft.asOf : rangeOk);
-  const filtersDirty = !isDraftApplied(draft, applied);
+  const kindOptions = useMemo(
+    () =>
+      (["portfolio", "account", "realized_summary", "realized_details"] as StatementKind[]).map((kind) => ({
+        value: kind,
+        label: t(`statements.kinds.${kind}`),
+      })),
+    [t],
+  );
+
+  const canLoad = statementCanLoad(filters);
+  const rangeOk = statementRangeValid(filters);
 
   const { data: stmt, isFetching, isError, error } = useQuery({
-    queryKey: ["client-statement", applied],
-    queryFn: () => loadStatement(applied!),
-    enabled: !!applied?.clientId,
-  });
-  const { data: openQs } = useQuery({
-    queryKey: ["statement-questions"],
-    queryFn: getStatementQuestions,
+    queryKey: ["client-statement", filters],
+    queryFn: () => loadStatement(filters),
+    enabled: canLoad,
   });
 
-  function apply() {
-    if (!canRun) return;
-    setApplied(draft);
-    setLocation(statementQuery(draft));
-  }
-
-  const selectedClient = clients.find((row) => String(row.clientId) === draft.clientId);
+  const selectedClient = clients.find((row) => String(row.clientId) === filters.clientId);
   const toolbarCount = stmt
     ? `${stmt.investor.displayName || stmt.investor.nameAr || stmt.investor.nameEn} · ${stmt.investor.nin}`
     : selectedClient
@@ -143,49 +126,69 @@ export default function Statements() {
       actions={
         <>
           <SelectField
-            className="h-9 w-[240px] min-w-[240px] max-w-[240px] shrink-0"
+            className={FILTER_SELECT}
             contentClassName="clients-select-content min-w-[18rem]"
-            value={draft.clientId}
-            onValueChange={(clientId) => setDraft((d) => ({ ...d, clientId }))}
+            value={filters.clientId}
+            onValueChange={(clientId) => navigate({ ...filters, clientId })}
             options={clientOptions}
-            placeholder={clientsLoading ? t("common.loading") : t("statements.pickClient")}
+            placeholder={clientsLoading ? t("common.loading") : t("statements.chooseClient")}
             searchPlaceholder={t("statements.searchClient")}
             emptyText={t("statements.noClientMatch")}
             aria-label={t("common.client")}
           />
           <SelectField
-            className="h-9 w-[150px] min-w-[150px] max-w-[150px] shrink-0"
-            contentClassName="clients-select-content min-w-[18rem]"
-            value={draft.kind}
-            onValueChange={(kind) => setDraft((d) => ({ ...d, kind: parseKind(kind) }))}
-            options={KINDS.map((kind) => ({ value: kind, label: t(`statements.kinds.${kind}`) }))}
+            className={FILTER_SELECT}
+            contentClassName="clients-select-content min-w-[12rem]"
+            value={filters.kind}
+            onValueChange={(kind) => navigate(withStatementKind(filters, parseStatementKind(kind)))}
+            options={kindOptions}
             aria-label={t("statements.kind")}
           />
-          {draft.kind === "portfolio" ? (
-            <DatePicker
-              className="min-w-44 w-auto"
-              prefix={t("statements.asOf")}
-              value={draft.asOf}
-              onChange={(iso) => setDraft((d) => ({ ...d, asOf: iso || todayQatarIso() }))}
-              max={todayQatarIso()}
-            />
+          {filters.kind === "account" ? (
+            <label className="inline-flex h-9 shrink-0 items-center gap-2 rounded-[10px] border border-[#e1e7f0] bg-white px-3 text-[12px] font-medium text-[#657491]">
+              <span className={filters.accountLayout === "grouped" ? "font-semibold text-[#17356d]" : ""}>
+                {t("statements.accountLayout.grouped")}
+              </span>
+              <Switch
+                checked={filters.accountLayout === "detailed"}
+                onCheckedChange={(detailed) => navigate({
+                  ...filters,
+                  accountLayout: detailed ? "detailed" : "grouped",
+                })}
+                aria-label={t("statements.accountLayout.label")}
+              />
+              <span className={filters.accountLayout === "detailed" ? "font-semibold text-[#17356d]" : ""}>
+                {t("statements.accountLayout.detailed")}
+              </span>
+            </label>
+          ) : null}
+          {filters.kind === "portfolio" ? (
+            <>
+              <DatePicker
+                className="min-w-fit w-auto shrink-0"
+                prefix={t("statements.asOf")}
+                value={filters.asOf}
+                onChange={(iso) => navigate({ ...filters, asOf: iso || todayQatarIso() })}
+                max={todayQatarIso()}
+              />
+              <label className="inline-flex h-9 shrink-0 items-center gap-2 rounded-[10px] border border-[#e1e7f0] bg-white px-3 text-[12px] font-medium text-[#657491]">
+                <Switch
+                  checked={filters.includeZeroQty}
+                  onCheckedChange={(includeZeroQty) => navigate({ ...filters, includeZeroQty })}
+                  aria-label={t("statements.includeZeroQty")}
+                />
+                <span>{t("statements.includeZeroQty")}</span>
+              </label>
+            </>
           ) : (
             <DateRangePicker
-              className="min-w-56 w-auto"
-              from={draft.from}
-              to={draft.to}
-              onChange={({ from, to }) => setDraft((d) => ({ ...d, from, to }))}
+              className="min-w-fit w-auto shrink-0"
+              from={filters.from}
+              to={filters.to}
+              max={todayQatarIso()}
+              onChange={({ from, to }) => navigate({ ...filters, from, to })}
             />
           )}
-          {filtersDirty ? (
-            <DataTableIconBtn
-              label={t("statements.applyFilters")}
-              icon={<ArrowRight className="size-5 rtl:rotate-180" />}
-              active
-              disabled={!canRun || isFetching}
-              onClick={apply}
-            />
-          ) : null}
         </>
       }
     />
@@ -193,7 +196,8 @@ export default function Statements() {
 
   return (
     <Shell>
-      <PageHeader  className="!mt-4"
+      <PageHeader
+        className="!mt-4"
         title={t("statements.title")}
         description={t("statements.description")}
         actions={
@@ -220,12 +224,12 @@ export default function Statements() {
             <Button
               type="button"
               variant="outline"
-              disabled={!applied || exporting}
+              disabled={!canLoad || exporting}
               onClick={async () => {
-                if (!applied) return;
+                if (!canLoad) return;
                 setExporting(true);
                 try {
-                  await downloadStatementExcel(applied.clientId, applied.kind, applied);
+                  await downloadStatementExcel(filters.clientId, filters.kind, filters);
                 } catch (err) {
                   console.error(err);
                   window.alert((err as Error | undefined)?.message || t("statements.exportFailed"));
@@ -249,15 +253,22 @@ export default function Statements() {
 
       <section className="clients-table-card overflow-hidden">
         {toolbar}
-        {!rangeOk && draft.kind !== "portfolio" ? (
+        {!rangeOk && filters.kind !== "portfolio" ? (
           <p className="px-5 py-3 text-sm text-loss">{t("statements.invalidRange")}</p>
         ) : null}
-        {!applied ? (
+        {!filters.clientId ? (
           <EmptyState
             className="py-16"
             icon={<FileIcon className="h-12 w-12" />}
             title={t("statements.emptyTitle")}
             description={t("statements.emptyDesc")}
+          />
+        ) : !canLoad ? (
+          <EmptyState
+            className="py-16"
+            icon={<FileIcon className="h-12 w-12" />}
+            title={t("statements.emptyTitle")}
+            description={t("statements.invalidRange")}
           />
         ) : isFetching && !stmt ? (
           <div className="space-y-3 p-5">
@@ -272,7 +283,17 @@ export default function Statements() {
             description={(error as Error | undefined)?.message || t("statements.errorDesc")}
           />
         ) : stmt ? (
-          <StatementPreview stmt={stmt} />
+          <StatementPreview
+            stmt={stmt}
+            onOpenDetails={(ticker) =>
+              navigate({
+                ...withStatementKind(filters, "realized_details"),
+                ticker,
+              })
+            }
+            detailsTickerFilter={filters.ticker}
+            onDetailsTickerFilter={(ticker) => navigate({ ...filters, ticker })}
+          />
         ) : (
           <EmptyState
             className="py-16"
@@ -282,29 +303,24 @@ export default function Statements() {
           />
         )}
       </section>
-
-      {/* <p className="mt-8 text-sm text-muted-foreground">{t("statements.openQuestionsHint")}</p>
-      <BlockedBoardTable rows={openQs?.rows ?? []} askPrefix="statements.ask" /> */}
     </Shell>
   );
 }
 
 function clientLabel(row: ExtClientListRow, locale: string) {
-  const name = extClientDisplayName(row, locale) || row.accountNumber;
-  return `${name} · ${row.clientId}`;
+  const name = extClientDisplayName(row, locale)?.trim() || "—";
+  const nin = row.nin != null && String(row.nin).trim() !== "" ? String(row.nin).trim() : "";
+  return nin ? `${name} · ${nin}` : name;
 }
 
 function clientSearchText(row: ExtClientListRow, locale: string) {
+  // User-facing identity is name + NIN; internal trading IDs stay searchable for ops only.
   return [
     extClientDisplayName(row, locale),
     row.name,
     row.nameEn,
     row.nameAr,
-    row.clientId,
     row.nin,
-    row.accountNumber,
-    row.mainObjCode,
-    row.id,
   ]
     .filter((part) => part != null && String(part).trim() !== "")
     .join(" ")

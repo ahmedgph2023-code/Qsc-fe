@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AppTable, CLIENT_PAGE_SIZES } from "@/components/phase1/DataTableCard";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
+import { useStoredPageSize } from "@/lib/tablePageSize";
 import {
   approveFeeCharge,
   bulkApproveFeeCharges,
@@ -59,7 +60,7 @@ export default function Fees() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(CLIENT_PAGE_SIZES[0]);
+  const [pageSize, setPageSize] = useStoredPageSize(CLIENT_PAGE_SIZES, CLIENT_PAGE_SIZES[0]);
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [decide, setDecide] = useState<{

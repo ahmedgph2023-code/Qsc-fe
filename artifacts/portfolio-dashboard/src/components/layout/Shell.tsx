@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import {
   LayoutDashboard, Users, LineChart, TrendingUp, LogOut, Menu,
   Blocks, RefreshCw, ShieldCheck, TriangleAlert,
-  Search, FileText, UserCog, Scale, Radio, ClipboardList,
+  Search, FileText, UserCog, Scale, Radio, ClipboardList, Settings, MessageCircle,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -54,6 +54,8 @@ const NAV_GROUPS: Array<{
     { href: "/risk", labelKey: "nav.items.risk", icon: TriangleAlert },
   ]},
   { labelKey: "nav.groups.admin", items: [
+    { href: "/settings", labelKey: "nav.items.settings", icon: Settings, access: { roles: ["admin", "pm"] } },
+    { href: "/whatsapp", labelKey: "nav.items.whatsapp", icon: MessageCircle, access: { roles: ["admin", "pm"] } },
     { href: "/users", labelKey: "nav.items.users", icon: UserCog, access: { roles: ["admin"] } },
   ]},
 ];
@@ -732,6 +734,8 @@ function AccountMenu({
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
+  const path = location.split("?")[0];
+  const whatsAppPage = path === "/whatsapp";
   const { logout, displayName, username, role } = useAuth();
   const { headerPin, sidebarMode, palette, accent, showClock } = useUiPrefs();
   const { t } = useTranslation();
@@ -741,7 +745,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   });
 
   const compactNav = useCompactNavRail();
-  const collapsed = sidebarMode === "collapsed" || (sidebarMode === "auto" && autoCollapsed);
+  const collapsed =
+    whatsAppPage || sidebarMode === "collapsed" || (sidebarMode === "auto" && autoCollapsed);
   const iconOnly = collapsed || compactNav;
   const showCollapse = sidebarMode === "auto";
 
@@ -776,7 +781,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         "--shell-sidebar-width": iconOnly ? `${SIDEBAR_COLLAPSED_W}px` : `${SIDEBAR_EXPANDED_W}px`,
       } as CSSProperties}
     >
-      <div className="shell-float mx-3 mt-3 flex items-center justify-between rounded-[21px] border border-(--shell-border) bg-(image:--shell-header-bg) px-4 py-3 md:hidden">
+      <div className={cn("shell-float mx-3 mt-3 flex items-center justify-between rounded-[21px] border border-(--shell-border) bg-(image:--shell-header-bg) px-4 py-3 md:hidden", whatsAppPage && "hidden")}>
         <div className="flex items-center gap-2">
           <BrandLogo variant="wordmark" className="h-9 w-auto max-w-[168px] object-contain" />
         </div>
@@ -814,6 +819,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           className={cn(
             "shell-header-layer relative hidden min-h-(--shell-header-h) w-full shrink-0 items-center overflow-visible border-b border-(--shell-line) bg-(image:--shell-header-bg) md:flex",
             headerPin === "sticky" && "sticky top-0",
+            whatsAppPage && "!hidden",
           )}
         >
           <div className="flex min-h-(--shell-header-h) w-full min-w-0 items-stretch">
@@ -897,8 +903,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </aside>
 
           <div className="shell-main shell-body-layer relative flex min-h-0 w-full min-w-0 flex-[1_1_0] flex-col">
-            <main className="page-canvas relative z-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-transparent px-5 py-2 md:px-6 md:py-4">
-              <div className="page-canvas-inner mx-auto max-w-[1440px] animate-[ipms-fade-up_var(--duration-complex)_var(--ease-out)]">
+            <main
+              className={cn(
+                "page-canvas relative z-0 min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-transparent px-5 py-2 md:px-6 md:py-4",
+                whatsAppPage && "!overflow-hidden px-3 py-3 md:px-5 md:py-4",
+              )}
+            >
+              <div
+                className={cn(
+                  "page-canvas-inner mx-auto max-w-[1440px] animate-[ipms-fade-up_var(--duration-complex)_var(--ease-out)]",
+                  whatsAppPage && "mx-0 flex h-full max-w-none flex-col animate-none",
+                )}
+              >
                 {children}
               </div>
             </main>

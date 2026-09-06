@@ -33,6 +33,7 @@ import { canPerformAction } from "@/lib/access";
 import { SelectField } from "@/components/phase1/SelectField";
 import { DatePicker } from "@/components/phase1/DatePicker";
 import { DataTableCard, DataTableEmpty, DataTableHead, DataTableIconBtn } from "@/components/phase1/DataTableCard";
+import { useStoredPageSize } from "@/lib/tablePageSize";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (val: number) =>
@@ -442,7 +443,7 @@ export default function Customers() {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useStoredPageSize(PAGE_SIZES, 10);
   const [extraCols, setExtraCols] = useState<Record<ExtraCol, boolean>>({ cash: false, risk: false, controls: false });
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();

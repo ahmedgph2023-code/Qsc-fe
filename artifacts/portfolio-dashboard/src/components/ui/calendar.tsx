@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 function Calendar({
   className,
   classNames,
-  showOutsideDays = true,
+  showOutsideDays = false,
   captionLayout = "label",
   navLayout = "around",
   formatters,
@@ -86,7 +86,7 @@ function Calendar({
         today: cn(defaultClassNames.today),
         outside: cn("text-[#b7c3de]", defaultClassNames.outside),
         disabled: cn("opacity-30", defaultClassNames.disabled),
-        hidden: cn("invisible", defaultClassNames.hidden),
+        hidden: cn("pointer-events-none invisible", defaultClassNames.hidden),
         ...classNames,
       }}
       components={{
@@ -126,7 +126,14 @@ function CalendarDayButton({
   const selectedSingle =
     modifiers.selected && !modifiers.range_start && !modifiers.range_end && !modifiers.range_middle
   const isSelected = selectedSingle || modifiers.range_start || modifiers.range_end
-  const extra = modifiers as typeof modifiers & { hasData?: boolean; inIpms?: boolean }
+  const extra = modifiers as typeof modifiers & {
+    hasData?: boolean
+    inIpms?: boolean
+    preview_end?: boolean
+    preview_middle?: boolean
+  }
+  const previewEnd = Boolean(extra.preview_end && !modifiers.range_end)
+  const previewMiddle = Boolean(extra.preview_middle)
 
   return (
     <button
@@ -146,9 +153,13 @@ function CalendarDayButton({
         "hover:bg-[#edf2ff] hover:text-[#1659ea]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4d79e9]/40 focus-visible:ring-offset-1",
         selectedSingle && "bg-[#1659ea] font-bold text-white shadow-[0_8px_16px_rgba(22,89,234,0.28)] hover:bg-[#1659ea] hover:text-white",
-        modifiers.range_start && "bg-[#1659ea] font-bold text-white hover:bg-[#1659ea] hover:text-white",
-        modifiers.range_end && "bg-[#1659ea] font-bold text-white hover:bg-[#1659ea] hover:text-white",
-        modifiers.range_middle && "rounded-none bg-[#edf2ff] text-[#1659ea]",
+        modifiers.range_start && !previewEnd && "bg-[#1659ea] font-bold text-white hover:bg-[#1659ea] hover:text-white",
+        modifiers.range_end && !previewEnd && "bg-[#1659ea] font-bold text-white hover:bg-[#1659ea] hover:text-white",
+        previewMiddle && "rounded-none bg-[#edf2ff] text-[#1659ea]",
+        modifiers.range_middle && !previewMiddle && "rounded-none bg-[#edf2ff] text-[#1659ea]",
+        previewEnd && "bg-[#4d79e9]/90 font-bold text-white ring-2 ring-[#93b4ff]/70 ring-offset-1 hover:bg-[#4d79e9]/90 hover:text-white",
+        (modifiers as typeof modifiers & { preview_only?: boolean }).preview_only
+          && "bg-[#1659ea] font-bold text-white shadow-[0_8px_16px_rgba(22,89,234,0.28)] ring-2 ring-[#93b4ff]/60 ring-offset-1 hover:bg-[#1659ea] hover:text-white",
         !isSelected && extra.inIpms && "bg-[#dce8ff] font-semibold text-[#175cd3] ring-1 ring-inset ring-[#175cd3]/35 hover:bg-[#cce0ff] hover:text-[#175cd3]",
         !isSelected && !extra.inIpms && extra.hasData && "bg-[#eef4ff] font-semibold text-[#175cd3] hover:bg-[#dce8ff] hover:text-[#175cd3]",
         modifiers.today && !isSelected && !extra.hasData && "bg-[#e8eefc] font-semibold text-[#1659ea] ring-1 ring-inset ring-[#4d79e9]/35",

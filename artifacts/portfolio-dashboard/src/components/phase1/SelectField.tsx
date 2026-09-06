@@ -4,14 +4,16 @@ import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 
 const EMPTY = "__empty__";
 
-export type SelectOption = { value: string; label: string; search?: string };
+export type SelectOption = { value: string; label: string; search?: string; group?: string };
 
 export function SelectField({
   value,
@@ -39,6 +41,8 @@ export function SelectField({
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const mapped = value === "" ? EMPTY : value;
+  const hasEmptyOption = options.some((opt) => opt.value === "");
+  const selectValue = value === "" && !hasEmptyOption ? undefined : mapped;
   const searchable = searchPlaceholder != null;
 
   const visible = useMemo(() => {
@@ -56,9 +60,22 @@ export function SelectField({
     return matched.slice(0, 80);
   }, [options, query, searchable, value]);
 
+  const grouped = useMemo(() => {
+    const hasGroups = visible.some((opt) => opt.group);
+    if (!hasGroups) return null;
+    const map = new Map<string, SelectOption[]>();
+    for (const opt of visible) {
+      const g = opt.group || "All";
+      const list = map.get(g) ?? [];
+      list.push(opt);
+      map.set(g, list);
+    }
+    return [...map.entries()];
+  }, [visible]);
+
   return (
     <Select
-      value={mapped}
+      value={selectValue}
       onValueChange={(next) => onValueChange(next === EMPTY ? "" : next)}
       onOpenChange={(next) => {
         if (!next) setQuery("");
@@ -68,7 +85,7 @@ export function SelectField({
       }}
       disabled={disabled}
     >
-      <SelectTrigger className={cn("min-w-36", className)} aria-label={ariaLabel}>
+      <SelectTrigger className={cn("w-auto min-w-[8.5rem] max-w-full", className)} aria-label={ariaLabel}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className={contentClassName}>
@@ -91,14 +108,28 @@ export function SelectField({
             </label>
           </div>
         ) : null}
-        {visible.map((opt) => {
-          const itemValue = opt.value === "" ? EMPTY : opt.value;
-          return (
-            <SelectItem key={itemValue} value={itemValue}>
-              {opt.label}
-            </SelectItem>
-          );
-        })}
+        {grouped
+          ? grouped.map(([group, opts]) => (
+              <SelectGroup key={group}>
+                <SelectLabel>{group}</SelectLabel>
+                {opts.map((opt) => {
+                  const itemValue = opt.value === "" ? EMPTY : opt.value;
+                  return (
+                    <SelectItem key={itemValue} value={itemValue}>
+                      {opt.label}
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            ))
+          : visible.map((opt) => {
+              const itemValue = opt.value === "" ? EMPTY : opt.value;
+              return (
+                <SelectItem key={itemValue} value={itemValue}>
+                  {opt.label}
+                </SelectItem>
+              );
+            })}
         {searchable && visible.length === 0 ? (
           <div className="px-2 py-3 text-center text-[13px] text-[#8a97b0]">{emptyText ?? "—"}</div>
         ) : null}

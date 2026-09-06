@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AppTable, CLIENT_PAGE_SIZES } from "@/components/phase1/DataTableCard";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
+import { useStoredPageSize } from "@/lib/tablePageSize";
 import { Badge } from "@/components/ui/badge";
 import {
   deleteOfficialClose,
@@ -32,7 +33,7 @@ export function OfficialClosesPanel() {
   const [addDate, setAddDate] = useState("2024-12-01");
   const [addPrice, setAddPrice] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(CLIENT_PAGE_SIZES[1] ?? 25);
+  const [pageSize, setPageSize] = useStoredPageSize(CLIENT_PAGE_SIZES, CLIENT_PAGE_SIZES[1] ?? 25);
   const offset = (page - 1) * pageSize;
 
   const summary = useQuery({ queryKey: ["official-closes-summary"], queryFn: getOfficialClosesSummary });

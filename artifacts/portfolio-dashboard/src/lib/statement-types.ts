@@ -138,6 +138,7 @@ export type AccountStatement = {
   company: StatementCompanyHeader;
   investor: StatementInvestorHeader;
   dates: { mode: "range"; from: string; to: string };
+  layout?: "grouped" | "detailed";
   openingBalance: number;
   openingDate: string | null;
   lines: AccountStatementLine[];
@@ -209,6 +210,8 @@ export type RealizedDetailsStock = {
   ticker: string;
   compId: number | null;
   currency: "QAR";
+  /** Optional sector for details filter grouping (when backend provides it). */
+  sectorName?: string | null;
   lines: RealizedBlotterLine[];
   totals: {
     buyQty: number;

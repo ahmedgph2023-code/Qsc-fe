@@ -34,6 +34,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { IndexConstituentsDialog } from "@/components/IndexConstituentsDialog";
 import { IndexDataPointDialog, IndexExcelUploadControls } from "@/components/IndexDataPointDialog";
 import { ExcelIcon } from "@/components/phase1/ExportFormatIcons";
+import { useStoredPageSize } from "@/lib/tablePageSize";
 import {
   ChevronLeft, Loader2, TrendingUp, TrendingDown,
   Layers, PenLine, Trash2, ChevronDown, ChevronRight, Plus,
@@ -110,7 +111,7 @@ export default function IndexDetail() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(CLIENT_PAGE_SIZES[0]);
+  const [pageSize, setPageSize] = useStoredPageSize(CLIENT_PAGE_SIZES, CLIENT_PAGE_SIZES[0]);
   const [exporting, setExporting] = useState<"filtered" | "all" | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
   const [editDate, setEditDate] = useState<string | null>(null);

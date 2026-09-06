@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Inbox } from "lucide-react";
+import { AlertTriangle, Inbox, Loader2 } from "lucide-react";
 import { Shell } from "@/components/layout/Shell";
 import { PageHeader, EmptyState } from "@/components/phase1/PageHeader";
 import { DatePicker } from "@/components/phase1/DatePicker";
@@ -12,30 +12,26 @@ import { StatsSummaryBar, type StatsSummaryItem } from "@/components/phase1/Stat
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DataTableIconBtn, DataTableToolbar, useClientTablePage } from "@/components/phase1/DataTableCard";
+import { DataTableToolbar, useClientTablePage } from "@/components/phase1/DataTableCard";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
-import { BlockedBoardTable } from "@/components/phase1/BlockedBoardTable";
 import { getSnapshots, runSnapshots, getBalanceQuestions, type SnapshotCompareRow, type SnapshotMatchStatus } from "@/lib/api";
 import { formatQar } from "@/components/statements/StatementPreview";
+import { todayQatarIso } from "@/lib/qatarDates";
+import {
+  balanceFiltersPath,
+  ensureBalanceSearchDefaults,
+  parseBalanceFilters,
+  type BalanceFilters,
+} from "@/lib/balanceFilters";
 import { cn } from "@/lib/utils";
 
-const todayQatarIso = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Qatar" });
-
+const FILTER_SELECT = "h-9 w-auto min-w-fit max-w-[min(100%,18rem)] shrink-0";
 const thClass =
   "h-[52px] bg-[#f8faff] px-3.5 text-[10px] font-bold tracking-[0.6px] text-[#657491] first:text-center";
 const cellPy = { paddingTop: 8, paddingBottom: 8 } as const;
 const TABLE_WRAP = "clients-table-wrap overflow-x-auto";
-
-function readAsOfFromUrl() {
-  const q = new URLSearchParams(window.location.search);
-  return q.get("asOf") || todayQatarIso();
-}
-
-function readClientFromUrl() {
-  return new URLSearchParams(window.location.search).get("client") || "";
-}
 
 function Money({ value }: { value: number | null | undefined }) {
   return (
@@ -75,14 +71,26 @@ export default function Balances() {
   const { role, username } = useAuth();
   const canRun = canPerformAction("snapshot.run", { role, username });
   const client = useQueryClient();
-  const [asOf, setAsOf] = useState(readAsOfFromUrl);
-  const [status, setStatus] = useState("");
+  const [, setLocation] = useLocation();
+  const search = useSearch();
   const [error, setError] = useState("");
-  const clientFilter = readClientFromUrl();
+
+  const filters = useMemo(() => parseBalanceFilters(search), [search]);
+
+  useEffect(() => {
+    const nextSearch = ensureBalanceSearchDefaults(search);
+    if (nextSearch != null) {
+      setLocation(`/balances?${nextSearch}`, { replace: true });
+    }
+  }, [search, setLocation]);
+
+  const navigate = (next: BalanceFilters) => {
+    setLocation(balanceFiltersPath(next));
+  };
 
   const { data, isLoading, isError, error: loadError } = useQuery({
-    queryKey: ["snapshots", asOf],
-    queryFn: () => getSnapshots(asOf),
+    queryKey: ["snapshots", filters.asOf],
+    queryFn: () => getSnapshots(filters.asOf),
   });
   const { data: openQs } = useQuery({
     queryKey: ["balance-questions"],
@@ -90,24 +98,24 @@ export default function Balances() {
   });
 
   const runMut = useMutation({
-    mutationFn: () => runSnapshots(asOf),
+    mutationFn: () => runSnapshots(filters.asOf),
     onSuccess: () => {
       setError("");
-      client.invalidateQueries({ queryKey: ["snapshots", asOf] });
+      client.invalidateQueries({ queryKey: ["snapshots", filters.asOf] });
     },
     onError: (e: Error) => setError(e.message),
   });
 
   const rows = useMemo(() => {
     let list = data?.rows ?? [];
-    if (clientFilter) {
-      const id = Number(clientFilter);
-      list = list.filter((r) => r.clientId === id || String(r.clientId) === clientFilter);
+    if (filters.clientId) {
+      const id = Number(filters.clientId);
+      list = list.filter((r) => r.clientId === id || String(r.clientId) === filters.clientId);
     }
-    if (!status) return list;
-    return list.filter((r) => r.status === status);
-  }, [data?.rows, status, clientFilter]);
-  const paging = useClientTablePage(rows, `${asOf}|${status}|${clientFilter}|${rows.length}`);
+    if (!filters.status) return list;
+    return list.filter((r) => r.status === filters.status);
+  }, [data?.rows, filters.status, filters.clientId]);
+  const paging = useClientTablePage(rows, `${filters.asOf}|${filters.status}|${filters.clientId}|${rows.length}`);
 
   const summary = data?.summary;
   const qscDates = data?.qscDates ?? [];
@@ -153,14 +161,6 @@ export default function Balances() {
     },
   ];
 
-  useEffect(() => {
-    const u = new URL(window.location.href);
-    u.searchParams.set("asOf", asOf);
-    if (clientFilter) u.searchParams.set("client", clientFilter);
-    else u.searchParams.delete("client");
-    window.history.replaceState(null, "", `${u.pathname}${u.search}`);
-  }, [asOf, clientFilter]);
-
   return (
     <Shell>
       <PageHeader
@@ -175,15 +175,16 @@ export default function Balances() {
         <DataTableToolbar
           className="flex-wrap"
           icon="/Holdings + cash.png"
-          count={t("balances.toolbarCount", { date: asOf, count: rows.length })}
+          count={t("balances.toolbarCount", { date: filters.asOf, count: rows.length })}
           countLoading={isLoading}
           actions={
             <>
               <DatePicker
-                className="min-w-44 w-auto"
+                className="min-w-fit w-auto shrink-0"
                 prefix={t("balances.asOf")}
-                value={asOf}
-                onChange={(iso) => setAsOf(iso || todayQatarIso())}
+                value={filters.asOf}
+                onChange={(iso) => navigate({ ...filters, asOf: iso || todayQatarIso() })}
+                max={todayQatarIso()}
                 dataDates={qscDates.map((d) => d.date)}
                 storedDates={storedDates}
                 quickDates={qscDates.map((d) => ({
@@ -193,10 +194,12 @@ export default function Balances() {
                 }))}
               />
               <SelectField
-                className="h-9 w-[150px] min-w-[150px] max-w-[150px] shrink-0"
-                contentClassName="clients-select-content min-w-[14rem]"
-                value={status}
-                onValueChange={setStatus}
+                className={FILTER_SELECT}
+                contentClassName="clients-select-content min-w-[12rem]"
+                value={filters.status}
+                onValueChange={(status) =>
+                  navigate({ ...filters, status: status as BalanceFilters["status"] })
+                }
                 options={[
                   { value: "", label: t("balances.allStatus") },
                   { value: "matched", label: t("balances.status.matched") },
@@ -208,16 +211,27 @@ export default function Balances() {
                 aria-label={t("balances.col.status")}
               />
               {canRun ? (
-                <DataTableIconBtn
-                  label={runMut.isPending ? t("common.loading") : t("balances.run")}
-                  icon={<ArrowRight className="size-5 rtl:rotate-180" />}
-                  active
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 shrink-0"
                   disabled={runMut.isPending}
                   onClick={() => runMut.mutate()}
-                />
+                >
+                  {runMut.isPending ? (
+                    <Loader2 className="me-2 size-4 animate-spin" />
+                  ) : null}
+                  {runMut.isPending ? t("common.loading") : t("balances.run")}
+                </Button>
               ) : null}
-              {!qscDates.length && data?.latestQscDate && data.latestQscDate !== asOf ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => setAsOf(data.latestQscDate!)}>
+              {!qscDates.length && data?.latestQscDate && data.latestQscDate !== filters.asOf ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate({ ...filters, asOf: data.latestQscDate! })}
+                >
                   {t("balances.useLatestQsc")}
                 </Button>
               ) : null}
@@ -226,9 +240,9 @@ export default function Balances() {
         />
 
         <div className="p-4 sm:p-5">
-          {data?.maxOfficialCloseDate && asOf > data.maxOfficialCloseDate ? (
+          {data?.maxOfficialCloseDate && filters.asOf > data.maxOfficialCloseDate ? (
             <p className="mb-4 text-sm text-[#657491]">
-              {t("balances.closesLag", { asOf, closeDate: data.maxOfficialCloseDate })}
+              {t("balances.closesLag", { asOf: filters.asOf, closeDate: data.maxOfficialCloseDate })}
             </p>
           ) : null}
           {!qscDates.length && data?.latestQscDate ? (

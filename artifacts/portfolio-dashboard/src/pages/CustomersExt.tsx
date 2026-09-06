@@ -11,6 +11,7 @@ import { StatsSummaryBar } from "@/components/phase1/StatsSummaryBar";
 import { AnimatedNumber } from "@/components/phase1/AnimatedNumber";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTableCard, DataTableEmpty, DataTableHead, DataTableIconBtn, useTablePageBusy } from "@/components/phase1/DataTableCard";
+import { useStoredPageSize } from "@/lib/tablePageSize";
 import { SelectField } from "@/components/phase1/SelectField";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +82,7 @@ export default function CustomersExt() {
   const [search, setSearch] = useState("");
   const [activity, setActivity] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useStoredPageSize(PAGE_SIZES, 10);
   const [showSourceHints, setShowSourceHints] = useState(true);
 
   const { data: clients = [], isLoading, isError, error } = useQuery({

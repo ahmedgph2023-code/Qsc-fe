@@ -9,7 +9,7 @@ import type {
   StatementInvestorHeader,
   StatementMoney,
 } from "@/lib/statement-types";
-import { formatQar, formatStatementAmount } from "@/components/statements/StatementPreview";
+import { formatQar, formatQty, formatStatementAmount } from "@/components/statements/StatementPreview";
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -36,6 +36,10 @@ function money(m: StatementMoney) {
 
 function num(n: number | null | undefined) {
   return n == null ? "" : formatQar(n);
+}
+
+function qtyInt(n: number | null | undefined) {
+  return n == null ? "" : formatQty(n);
 }
 
 function price3(n: number | null | undefined) {
@@ -297,7 +301,7 @@ function portfolioBody(stmt: PortfolioStatement) {
   const tableRows = lines.map((l) => `<tr>
       <td class="num">${l.lineNo}</td>
       <td>${escapeHtml(securityLabel(l))}</td>
-      <td class="num">${num(l.quantity)}</td>
+      <td class="num">${qtyInt(l.quantity)}</td>
       <td class="num">${num(l.costValue)}</td>
       <td class="num">${price3(l.shareCost)}</td>
       <td class="num">${money(l.breakEven)}</td>
@@ -404,7 +408,7 @@ function detailsBody(stmt: RealizedDetailsStatement) {
       <td class="num">${num(l.buyQty)}</td>
       <td class="num">${num(l.sellQty)}</td>
       <td class="num">${num(l.shareBalance)}</td>
-      <td class="num">${num(l.price)}</td>
+      <td class="num">${price3(l.price)}</td>
       <td class="num">${num(l.buyValue)}</td>
       <td class="num">${num(l.sellValue)}</td>
       <td class="num">${num(l.shareCost)}</td>

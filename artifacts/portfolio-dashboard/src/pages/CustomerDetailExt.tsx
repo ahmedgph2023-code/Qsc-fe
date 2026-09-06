@@ -19,6 +19,7 @@ import { CDP_TAB, CdpTabsList } from "@/components/phase1/CdpTabs";
 import { DataTableCard, DataTableEmpty, DataTableHead, DataTableSkeletonRows } from "@/components/phase1/DataTableCard";
 import { SelectField } from "@/components/phase1/SelectField";
 import { buildClientHoldingsViewModel, emptyClientHoldingsViewModel } from "@/lib/clientHoldingsModel";
+import { useStoredPageSize } from "@/lib/tablePageSize";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (val: number) =>
@@ -43,13 +44,13 @@ export default function CustomerDetailExt() {
   const [asOf, setAsOf] = useState(todayQatarIso);
   const [showSourceHints, setShowSourceHints] = useState(true);
   const [sharePage, setSharePage] = useState(1);
-  const [sharePageSize, setSharePageSize] = useState(10);
+  const [sharePageSize, setSharePageSize] = useStoredPageSize(LEDGER_PAGE_SIZES, 10);
   const [shareQ, setShareQ] = useState("");
   const [shareQDebounced, setShareQDebounced] = useState("");
   const [shareSide, setShareSide] = useState("");
   const [shareType, setShareType] = useState("");
   const [cashPage, setCashPage] = useState(1);
-  const [cashPageSize, setCashPageSize] = useState(10);
+  const [cashPageSize, setCashPageSize] = useStoredPageSize(LEDGER_PAGE_SIZES, 10);
   const [cashQ, setCashQ] = useState("");
   const [cashQDebounced, setCashQDebounced] = useState("");
   const [cashStatus, setCashStatus] = useState("");
