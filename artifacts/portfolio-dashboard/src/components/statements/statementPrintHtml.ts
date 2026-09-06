@@ -156,6 +156,8 @@ function printChrome(
   .subtotal { background: #eef2f7; font-weight: 600; }
   .grand { background: #1a365d; color: #fff; font-weight: 700; }
   .grand td { border-color: #1a365d; color: #fff; }
+  .sec-cell { display: inline-flex; align-items: center; gap: 6px; }
+  .sec-logo { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
   .page-break { page-break-before: always; break-before: page; margin-top: 12px; }
   .page2 { width: 100%; margin-top: 8px; }
   .page2 th { background: #d9e4f2; font-size: 9px; text-align: center; }
@@ -216,9 +218,20 @@ function stockWeightPct(line: PortfolioStatementLine, totalMv: number | null) {
   return formatQar((line.marketValue / totalMv) * 100);
 }
 
+function companyLogoUrl(ticker: string) {
+  const base = (typeof window !== "undefined" ? window.location.origin : "") + (import.meta.env.BASE_URL || "/");
+  const symbol = ticker.trim().toUpperCase();
+  return `${base.replace(/\/$/, "")}/company-logos/${encodeURIComponent(symbol)}.svg`;
+}
+
 function securityLabel(line: PortfolioStatementLine) {
   const code = line.compId ?? "";
   return `${code} | ${line.ticker} | ${line.companyName}`;
+}
+
+function securityCell(line: PortfolioStatementLine) {
+  const src = companyLogoUrl(line.ticker);
+  return `<span class="sec-cell"><img class="sec-logo" src="${escapeHtml(src)}" alt="" onerror="this.style.display='none'"/><span>${escapeHtml(securityLabel(line))}</span></span>`;
 }
 
 function securityAllocationBlock(stmt: PortfolioStatement) {
@@ -300,7 +313,7 @@ function portfolioBody(stmt: PortfolioStatement) {
   const totalUnrealized = lines.reduce((s, l) => s + (l.unrealizedGross ?? 0), 0);
   const tableRows = lines.map((l) => `<tr>
       <td class="num">${l.lineNo}</td>
-      <td>${escapeHtml(securityLabel(l))}</td>
+      <td>${securityCell(l)}</td>
       <td class="num">${qtyInt(l.quantity)}</td>
       <td class="num">${num(l.costValue)}</td>
       <td class="num">${price3(l.shareCost)}</td>

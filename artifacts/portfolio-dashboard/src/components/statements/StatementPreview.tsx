@@ -19,12 +19,12 @@ import type {
   AccountStatement,
   ClientStatement,
   PortfolioStatement,
-  PortfolioStatementSector,
   RealizedDetailsStatement,
   RealizedSummaryStatement,
   StatementMoney,
 } from "@/lib/statement-types";
 import { cn } from "@/lib/utils";
+import { CompanyTickerIcon } from "@/components/statements/CompanyTickerIcon";
 
 const TOTAL_ROW =
   "statement-total-row h-16 border-0 bg-[#0b1f4a] text-white hover:bg-[#0b1f4a] [&_td]:!bg-[#0b1f4a] [&_td]:text-white hover:[&_td]:!bg-[#0b1f4a]";
@@ -171,10 +171,6 @@ const SECTOR_TONES = [
   },
 ] as const;
 
-function sectorQty(sector: PortfolioStatementSector) {
-  return sector.lines.reduce((sum, line) => sum + line.quantity, 0);
-}
-
 function moneyKpi(money: StatementMoney) {
   return <AnimatedNumber value={money.value} format="currency" />;
 }
@@ -270,7 +266,6 @@ export function PortfolioStatementStats({ stmt }: { stmt: PortfolioStatement }) 
 function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
   const { t } = useTranslation();
   const lineCount = stmt.sectors.reduce((n, s) => n + s.lines.length, 0);
-  const grandQty = stmt.sectors.reduce((sum, s) => sum + sectorQty(s), 0);
   const flat = useMemo(
     () =>
       stmt.sectors.flatMap((sector, si) =>
@@ -346,7 +341,12 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
                     <TableCell className="px-3.5 text-center text-[11px] font-medium tabular-nums text-[#8a97b0]" style={cellPy}>
                       {companyNo}
                     </TableCell>
-                    <TableCell className="px-3.5 font-semibold text-[#17356d]" style={cellPy}>{line.companyName}</TableCell>
+                    <TableCell className="px-3.5 font-semibold text-[#17356d]" style={cellPy}>
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <CompanyTickerIcon ticker={line.ticker} companyName={line.companyName} />
+                        <span className="min-w-0 truncate">{line.companyName}</span>
+                      </span>
+                    </TableCell>
                     <TableCell className="px-3.5" style={cellPy}>
                       <span className="inline-flex h-6 min-w-12 items-center justify-center rounded-md bg-[#eef4ff] px-2 text-[11px] font-bold text-[#175cd3]">
                         {line.ticker}
@@ -395,9 +395,8 @@ function PortfolioPreview({ stmt }: { stmt: PortfolioStatement }) {
                   {t("statements.totalSubtitle", { sectors: stmt.sectors.length, rows: lineCount })}
                 </span>
               </TableCell>
-              <TableCell className="px-3.5 text-end text-[13px] font-bold tabular-nums text-white" style={cellPy}>
-                <Num value={grandQty} decimals={0} className="text-white" />
-              </TableCell>
+              {/* Client 2026-09-07: do not show total share quantity in totals */}
+              <TableCell className={cn("px-3.5 text-end", totalMuted)} style={cellPy}>—</TableCell>
               <TableCell className="px-3.5 text-end text-[14px] font-extrabold text-[#ffb4a8]" style={cellPy}>
                 <Num value={stmt.grandTotalCost} decimals={3} className="font-extrabold text-[#ffb4a8]" />
               </TableCell>
