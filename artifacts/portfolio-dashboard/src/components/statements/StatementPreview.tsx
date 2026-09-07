@@ -542,7 +542,12 @@ function SummaryPreview({
                 <TableCell className="px-3.5 text-center text-[11px] font-medium tabular-nums text-[#8a97b0]" style={cellPy}>
                   {paging.start + idx + 1}
                 </TableCell>
-                <TableCell className="px-3.5 font-semibold text-[#17356d]" style={cellPy}>{line.companyName}</TableCell>
+                <TableCell className="px-3.5 font-semibold text-[#17356d]" style={cellPy}>
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <CompanyTickerIcon ticker={line.ticker} companyName={line.companyName} />
+                    <span className="min-w-0 truncate">{line.companyName}</span>
+                  </span>
+                </TableCell>
                 <TableCell className="px-3.5" style={cellPy}>
                   {onOpenDetails ? (
                     <button
@@ -678,6 +683,7 @@ function DetailsPreview({
                     <TableRow className={cn("border-y border-[#d7e0ee]", tone.row)}>
                       <TableCell colSpan={9} className="px-4" style={cellPy}>
                         <div className="flex h-12 w-full items-center gap-3 text-start">
+                          <CompanyTickerIcon ticker={item.stock.ticker} companyName={item.stock.companyName} />
                           <span className="min-w-0 truncate text-[13px] font-bold tracking-tight text-[#16305f]">
                             {item.stock.companyName}
                           </span>

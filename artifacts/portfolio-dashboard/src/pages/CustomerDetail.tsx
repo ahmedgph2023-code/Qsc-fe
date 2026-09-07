@@ -34,6 +34,7 @@ import { CDP_TAB, CdpTabsList } from "@/components/phase1/CdpTabs";
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
 import { cn } from "@/lib/utils";
+import { CompanyTickerIcon, TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 import { allowedGroups, benchmarkNameFor, modelCodeFor, normalizeShariahGroup, normalizePreference, type RiskProfile, type ShariahPreference } from "@/lib/mandatePreview";
 
 const formatCurrency = (val: number) =>
@@ -1181,7 +1182,9 @@ function FiLotsPanel({ portfolioId }: { portfolioId: string }) {
           <TableBody>
             {paging.paged.map((lot: any) => (
               <TableRow key={lot.id}>
-                <TableCell className="font-mono font-semibold">{lot.ticker}</TableCell>
+                <TableCell className="font-mono font-semibold">
+                  <TickerLabel ticker={lot.ticker} />
+                </TableCell>
                 <TableCell className="capitalize">{lot.status}</TableCell>
                 <TableCell className="text-end font-data">{formatCurrency(Number(lot.faceAmount))}</TableCell>
                 <TableCell className="text-end font-data">{lot.latestPnl ? formatCurrency(Number(lot.latestPnl.bookValue)) : t("common.na")}</TableCell>
@@ -1981,7 +1984,13 @@ export default function CustomerDetail() {
                       </TableCell>
                       <TableCell>
                         <div className="cdp-stock">
-                          <b>{tx.stock?.ticker || tx.stockId}</b>
+                          <span className="inline-flex items-center gap-2">
+                            <CompanyTickerIcon
+                              ticker={tx.stock?.ticker || String(tx.stockId)}
+                              companyName={tx.stock?.companyName}
+                            />
+                            <b>{tx.stock?.ticker || tx.stockId}</b>
+                          </span>
                           <span>{tx.stock?.companyName}</span>
                         </div>
                       </TableCell>

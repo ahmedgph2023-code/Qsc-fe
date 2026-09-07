@@ -16,6 +16,7 @@ import {
   runScenario, listScenarios, runFrontier,
   type CustomerData,
 } from "@/lib/api";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 export default function AiAssistantPage() {
   const { t } = useTranslation();
@@ -347,7 +348,7 @@ export function FrontierPage() {
               <TableBody>
                 {paging.paged.map((p) => (
                   <TableRow key={p.ticker}>
-                    <TableCell>{p.ticker}</TableCell>
+                    <TableCell><TickerLabel ticker={p.ticker} /></TableCell>
                     <TableCell>{p.sector}</TableCell>
                     <TableCell className="text-end font-data">{(p.weight * 100).toFixed(2)}%</TableCell>
                   </TableRow>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_58" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 100 100">
+  <!-- Generator: Adobe Illustrator 29.0.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 186)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #17aed7;
+      }
+
+      .st1 {
+        fill: #fff;
+      }
+
+      .st2 {
+        fill: #0072a5;
+      }
+    </style>
+  </defs>
+  <circle class="st1" cx="49.6" cy="46.2" r="21.7"/>
+  <g id="Layer_21">
+    <g id="Layer_1-2">
+      <rect x="21" y="21" width="58" height="58"/>
+    </g>
+  </g>
+  <g>
+    <path class="st2" d="M40,71.7v-31.4h31.3v-12.1h-15.2c-2.6,0-5.1,1-6.9,2.8l-18.3,17.8c-1.9,1.8-2.9,4.3-2.9,6.9v15.9h12.1Z"/>
+    <rect class="st0" x="43.4" y="43.8" width="27.9" height="27.9"/>
+  </g>
+</svg>

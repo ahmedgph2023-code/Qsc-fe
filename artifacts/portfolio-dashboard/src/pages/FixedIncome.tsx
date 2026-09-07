@@ -13,6 +13,7 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/compon
 import { AppTable, ClientTableFooter, useClientTablePage } from "@/components/phase1/DataTableCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getFiInstrument, getFiInstruments, saveFiInstrument } from "@/lib/api";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 export default function FixedIncome() {
   const { t } = useTranslation();
@@ -84,7 +85,7 @@ export default function FixedIncome() {
               ) : paging.paged.map((r: any) => (
                 <TableRow key={r.id}>
                   <TableCell>
-                    <p className="font-mono font-semibold">{r.ticker}</p>
+                    <p className="font-semibold"><TickerLabel ticker={r.ticker} companyName={r.companyName} /></p>
                     <p className="text-xs text-muted-foreground">{r.companyName}</p>
                   </TableCell>
                   <TableCell className="capitalize">{String(r.instrumentType).replaceAll("_", " ")}</TableCell>

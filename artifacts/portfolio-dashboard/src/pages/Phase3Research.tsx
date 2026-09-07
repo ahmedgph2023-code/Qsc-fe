@@ -12,6 +12,7 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/compon
 import { AppTable, ClientTableFooter, useClientTablePage } from "@/components/phase1/DataTableCard";
 import { SelectField } from "@/components/phase1/SelectField";
 import { QuoteBoard, quoteLogoLabel } from "@/components/phase1/QuoteBoard";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 import {
   getMarketOverview, runScreener, listApprovedList, setApprovedListStatus,
   getCompanyResearch, upsertResearchLayer, requestResearchException,
@@ -87,6 +88,7 @@ function MoversTable({ title, rows }: { title: string; rows: Array<{ stockId: st
         id: r.stockId,
         href: `/research/companies/${r.stockId}`,
         logo: quoteLogoLabel(r.ticker),
+        ticker: r.ticker,
         title: r.ticker,
         price: r.close.toFixed(2),
         priceCaption: t("common.currencyValue"),
@@ -162,8 +164,8 @@ export function ScreenerPage() {
             {paging.paged.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <Link href={`/research/companies/${r.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
-                    {r.ticker}
+                  <Link href={`/research/companies/${r.id}`} className="text-primary underline-offset-2 hover:underline">
+                    <TickerLabel ticker={r.ticker} />
                   </Link>
                 </TableCell>
                 <TableCell>{r.sector}</TableCell>
@@ -227,8 +229,8 @@ export function ApprovedListPage() {
             ) : paging.paged.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <Link href={`/research/companies/${r.stockId}`} className="font-medium text-primary underline-offset-2 hover:underline">
-                    {r.ticker}
+                  <Link href={`/research/companies/${r.stockId}`} className="text-primary underline-offset-2 hover:underline">
+                    <TickerLabel ticker={r.ticker} />
                   </Link>
                 </TableCell>
                 <TableCell><Badge>{r.status}</Badge></TableCell>
@@ -443,7 +445,7 @@ export function ShariaEsgPage() {
           <TableBody>
             {paging.paged.map((r) => (
               <TableRow key={r.id}>
-                <TableCell>{r.ticker}</TableCell>
+                <TableCell><TickerLabel ticker={r.ticker} /></TableCell>
                 <TableCell>{r.shariahGroup ?? "—"}</TableCell>
                 <TableCell>{r.esgScore ?? "UNKNOWN"}</TableCell>
                 <TableCell className="font-data">{r.reviewDate ?? "—"}</TableCell>
@@ -551,7 +553,7 @@ export function ScoringPage() {
             ) : paging.paged.map((s) => (
               <TableRow key={s.stockId}>
                 <TableCell>{s.rank ?? "—"}</TableCell>
-                <TableCell>{s.ticker}</TableCell>
+                <TableCell><TickerLabel ticker={s.ticker} /></TableCell>
                 <TableCell className="text-end font-data">{s.score ?? "—"}</TableCell>
               </TableRow>
             ))}

@@ -13,6 +13,7 @@ import { Plus, Trash2, Loader2, Check, Building2, Tags } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatedNumber } from "@/components/phase1/AnimatedNumber";
 import { QuoteBoard, quoteLogoLabel } from "@/components/phase1/QuoteBoard";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 import { StatsSummaryBar } from "@/components/phase1/StatsSummaryBar";
 import { SelectField } from "@/components/phase1/SelectField";
 import { shariahGroupLabel, normalizeShariahGroup } from "@/lib/mandatePreview";
@@ -430,6 +431,7 @@ export default function Stocks() {
               id: s.id,
               href: `/stocks/${s.id}`,
               logo: quoteLogoLabel(s.ticker),
+              ticker: s.ticker,
               title: s.ticker,
               subtitle: s.companyName,
               meta: metaParts.join(" · "),
@@ -470,8 +472,8 @@ export default function Stocks() {
           </DialogHeader>
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {classifyRows.map((row, i) => (
-              <div key={row.id} className="grid grid-cols-[80px_1fr_1fr] gap-2">
-                <p className="flex h-10 items-center font-mono text-sm">{row.ticker}</p>
+              <div key={row.id} className="grid grid-cols-[auto_1fr_1fr] items-center gap-2">
+                <TickerLabel ticker={row.ticker} className="min-w-[7rem]" />
                 <SelectField
                   className="control"
                   value={normalizeShariahGroup(row.shariahGroup) || ""}

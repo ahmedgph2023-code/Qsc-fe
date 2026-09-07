@@ -1507,25 +1507,59 @@
   },
   "live": {
     "title": "Live market",
-    "description": "QSC broadcast feed for session prices. Historical statements stay on official close. This page does not connect until URL and JSON samples exist.",
-    "emptyTitle": "Feed not connected",
-    "valuationNote": "Session quotes must not replace official close on statements or daily balance market value.",
-    "ask": {
-      "q23": "Hub URL, auth, and from which network it can be opened.",
-      "q24": "Five JSON samples: exchange summary, market watch, trades, market depth, indices.",
-      "q25": "Does the session feed write that day’s official close, or do statements stay on stored close only?",
-      "q26": "Company SVG icons per ticker, if the live screen should show logos."
+    "description": "QSC broadcast: Last Price for session portfolio MV. Historical as-of dates stay on official close. Session-end Last Price is saved as that day's close.",
+    "emptyTitle": "No live quotes yet",
+    "emptyHint": "Load the meeting sample or set BROADCAST_WS_URL to the Hub feed.",
+    "loadSample": "Load meeting sample",
+    "connected": "Feed active",
+    "disconnected": "Feed idle",
+    "quotesCount": "{{count}} symbols",
+    "indicesCount": "{{count}} indices",
+    "indicesTitle": "Market indices",
+    "watchTitle": "Market watch",
+    "searchPlaceholder": "Search ticker or company…",
+    "showingCount": "Showing {{shown}} of {{total}} symbols",
+    "sessionOpen": "Session open",
+    "sessionClosed": "Outside session",
+    "sampleNote": "Meeting sample may be flat (0 change / volume) until the live Hub is connected.",
+    "summaryAria": "Live market summary",
+    "emptyFilterTitle": "No symbols match",
+    "emptyFilterDesc": "Clear search or filters to see the full market watch.",
+    "filter": {
+      "move": "Move",
+      "up": "Advancers",
+      "down": "Decliners",
+      "flat": "Unchanged"
     },
+    "summary": {
+      "index": "Exchange index",
+      "turnover": "Turnover (QAR)",
+      "volume": "Volume",
+      "breadth": "Advancers / decliners",
+      "updated": "Last update",
+      "unchangedHint": "{{count}} unchanged"
+    },
+    "col": {
+      "lastPrice": "Last price",
+      "close": "Close",
+      "change": "Change",
+      "changePct": "Change %",
+      "bid": "Bid",
+      "offer": "Ask",
+      "volume": "Volume",
+      "value": "Value",
+      "sector": "Sector",
+      "index": "Index"
+    },
+    "valuation": {
+      "official_close": "Valuation: official close",
+      "last_price_session": "Valuation: session last price"
+    },
+    "valuationNote": "Intraday ticks are not written to stock_prices. At 15:05 Asia/Qatar the job saves Last Price as that day's official close (س-25). Depth and trade tape are received in the feed but deferred for a later phase.",
     "reason": {
-      "NO_BROADCAST_WS_URL": "Set BROADCAST_WS_URL only after QSC sends the hub URL, auth, and five JSON samples (questions 23–25).",
-      "NO_JSON_SAMPLE": "A URL is configured, but IPMS will not connect until the five JSON samples are confirmed. Official closes are not written from this feed."
-    },
-    "objects": {
-      "exchange_summary": "Exchange summary",
-      "market_watch": "Market watch (named source for stock quotes)",
-      "trades": "Trades (market prints, not client fills)",
-      "market_depth": "Market depth (not used for valuation)",
-      "indices": "Indices"
+      "NO_BROADCAST_WS_URL": "Optional: set BROADCAST_WS_URL for the live Hub. Until then, use Load meeting sample.",
+      "NO_JSON_SAMPLE": "Waiting for JSON sample (meeting_3 BroadcastData.json is now available).",
+      "IDLE": "Feed idle outside session hours or waiting for messages."
     }
   },
   "productDecisions": {
@@ -2191,12 +2225,15 @@
       "sections": "Report data",
       "frequency": "Frequency",
       "customDays": "Send on days",
+      "monthDay": "Day of month (1–28)",
       "sendTime": "Send time (Qatar)",
       "asOfMode": "As-of date",
       "rangeDays": "Date range (days)"
     },
     "frequency": {
       "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
       "custom": "Custom days"
     },
     "asOf": {

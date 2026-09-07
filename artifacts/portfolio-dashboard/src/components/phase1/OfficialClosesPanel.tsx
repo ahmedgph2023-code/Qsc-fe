@@ -21,6 +21,7 @@ import {
   getKbIndexLevelsSummary,
   importKbIndexLevels,
 } from "@/lib/api";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 export function OfficialClosesPanel() {
   const { t } = useTranslation();
@@ -218,8 +219,8 @@ export function OfficialClosesPanel() {
             ) : (list.data?.data ?? []).map((row) => (
               <TableRow key={`${row.ticker}-${row.date}`}>
                 <TableCell>
-                  <div className="font-medium">{row.ticker}</div>
-                  <div className="text-xs text-muted-foreground">{row.companyName}</div>
+                  <TickerLabel ticker={row.ticker} companyName={row.companyName} />
+                  <div className="ps-9 text-xs text-muted-foreground">{row.companyName}</div>
                 </TableCell>
                 <TableCell className="font-data text-sm">{row.date}</TableCell>
                 <TableCell className="font-data">{row.closePrice}</TableCell>

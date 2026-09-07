@@ -17,6 +17,7 @@ import {
   listSystemUniverse, updateSystemUniverseStock, refreshSystemIlliquid,
 } from "@/lib/api";
 import { OfficialClosesPanel } from "@/components/phase1/OfficialClosesPanel";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 import { cn } from "@/lib/utils";
 
 type Tab = "ips" | "flags" | "halal" | "prices";
@@ -279,8 +280,8 @@ function HalalPanel() {
             ) : paging.paged.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <div className="font-medium">{r.ticker}</div>
-                  <div className="text-xs text-muted-foreground">{r.companyName}</div>
+                  <TickerLabel ticker={r.ticker} companyName={r.companyName} />
+                  <div className="ps-9 text-xs text-muted-foreground">{r.companyName}</div>
                 </TableCell>
                 <TableCell className="text-sm">{r.sector}</TableCell>
                 <TableCell>

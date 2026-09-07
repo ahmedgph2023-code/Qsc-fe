@@ -861,6 +861,7 @@ export default function Dashboard() {
               id: s.id,
               href: `/stocks/${s.id}`,
               logo: quoteLogoLabel(s.ticker),
+              ticker: s.ticker,
               title: s.ticker,
               subtitle: s.companyName,
               sparkline: s.sparkline || [],

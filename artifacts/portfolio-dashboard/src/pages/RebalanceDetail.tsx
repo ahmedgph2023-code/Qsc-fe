@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { CDP_TAB, CdpTabsList } from "@/components/phase1/CdpTabs";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AppTable, ClientTableFooter, useClientTablePage } from "@/components/phase1/DataTableCard";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 const qar = new Intl.NumberFormat("en-QA", { style: "currency", currency: "QAR" });
 
@@ -47,7 +48,12 @@ function SnapshotTable({ title, snapshot, stocks }: { title: string; snapshot: a
               const stock = stocks.find((s) => s.id === (h.stockId || h.id));
               return (
                 <TableRow key={`${h.stockId || h.id || i}-${paging.start + i}`}>
-                  <TableCell className="font-mono">{stock?.ticker || h.ticker || h.stockId || t("common.na")}</TableCell>
+                  <TableCell>
+                    <TickerLabel
+                      ticker={String(stock?.ticker || h.ticker || h.stockId || "")}
+                      companyName={stock?.companyName}
+                    />
+                  </TableCell>
                   <TableCell className="text-end font-data">
                     {h.quantity != null ? Number(h.quantity).toLocaleString() : h.weight != null ? `${(Number(h.weight) > 1 ? Number(h.weight) : Number(h.weight) * 100).toFixed(2)}%` : t("common.na")}
                   </TableCell>
@@ -231,7 +237,12 @@ export default function RebalanceDetail() {
                     return (
                       <TableRow key={trade.id}>
                         <TableCell className={trade.side === "BUY" ? "text-emerald-400" : "text-rose-400"}>{trade.side}</TableCell>
-                        <TableCell className="font-mono">{stock?.ticker || trade.stockId}</TableCell>
+                        <TableCell>
+                          <TickerLabel
+                            ticker={String(stock?.ticker || trade.stockId || "")}
+                            companyName={stock?.companyName}
+                          />
+                        </TableCell>
                         <TableCell className="text-end font-data">{Number(trade.quantity).toLocaleString()}</TableCell>
                         <TableCell className="text-end font-data">{qar.format(Number(trade.estimatedPrice))}</TableCell>
                         <TableCell className="text-end font-data">{qar.format(Number(trade.estimatedValue))}</TableCell>
@@ -266,7 +277,12 @@ export default function RebalanceDetail() {
                     const stock = stocks.find((s) => s.id === h.stockId);
                     return (
                       <TableRow key={`${h.stockId}-${targetPaging.start + i}`}>
-                        <TableCell className="font-mono">{stock?.ticker || h.stockId}</TableCell>
+                        <TableCell>
+                          <TickerLabel
+                            ticker={String(stock?.ticker || h.stockId || "")}
+                            companyName={stock?.companyName}
+                          />
+                        </TableCell>
                         <TableCell className="capitalize">{h.sleeve || t("common.na")}</TableCell>
                         <TableCell className="text-end font-data">
                           {(Number(h.weight) > 1 ? Number(h.weight) : Number(h.weight) * 100).toFixed(2)}%

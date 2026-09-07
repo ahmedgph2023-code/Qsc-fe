@@ -22,6 +22,7 @@ import { SourceHint } from "@/components/phase1/SourceHint";
 import { PanelEmptyState, TableSkeletonRows } from "@/components/phase1/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { CompanyTickerIcon, TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 const SECTOR_TONES = ["#1f58e9", "#8551d8", "#18a270", "#11a3b0", "#e98921", "#315bc6", "#e24b57", "#c5cedf"];
 const CASH_KEY = "Cash";
@@ -448,6 +449,9 @@ export function HistoricalPortfolioDashboard({
                               checked={on}
                               onChange={() => toggle(tkr)}
                             />
+                            {tkr !== CASH_KEY ? (
+                              <CompanyTickerIcon ticker={tkr} className="size-5 rounded" />
+                            ) : null}
                             <span className="font-mono font-semibold">{tkr === CASH_KEY ? cashLabel : tkr}</span>
                           </label>
                         </li>
@@ -536,7 +540,7 @@ export function HistoricalPortfolioDashboard({
                             <TableCell>
                               <Link href={`/stocks/${h.stockId}?portfolioId=${portfolioId}`}>
                                 <div className="flex items-center gap-2 hover:text-primary">
-                                  <div className="sym-tag">{h.ticker}</div>
+                                  <TickerLabel ticker={h.ticker} companyName={h.companyName} />
                                 </div>
                               </Link>
                             </TableCell>

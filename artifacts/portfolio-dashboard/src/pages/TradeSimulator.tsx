@@ -17,6 +17,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 export default function TradeSimulator() {
   const { t } = useTranslation();
@@ -134,7 +135,7 @@ export default function TradeSimulator() {
                   <TableBody>
                     {impactPaging.paged.map((w) => (
                       <TableRow key={w.stockId}>
-                        <TableCell className="font-mono">{w.ticker}</TableCell>
+                        <TableCell><TickerLabel ticker={w.ticker} /></TableCell>
                         <TableCell className="text-end font-data">{(w.before * 100).toFixed(2)}%</TableCell>
                         <TableCell className="text-end font-data">{(w.after * 100).toFixed(2)}%</TableCell>
                         <TableCell className="text-end font-data">{(w.delta * 100).toFixed(2)}%</TableCell>

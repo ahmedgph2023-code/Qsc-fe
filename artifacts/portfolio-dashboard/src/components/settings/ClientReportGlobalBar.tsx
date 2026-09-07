@@ -74,9 +74,7 @@ export function ClientReportGlobalBar() {
 
   const frequencyLabel = useMemo(() => {
     if (!global) return null;
-    return global.frequencyType === "daily"
-      ? t("clientReports.frequency.daily")
-      : t("clientReports.frequency.custom");
+    return t(`clientReports.frequency.${global.frequencyType}`);
   }, [global, t]);
 
   if (!global) return null;
@@ -135,14 +133,40 @@ export function ClientReportGlobalBar() {
                 <Label>{t("clientReports.field.frequency")}</Label>
                 <SelectField
                   value={form.frequencyType}
-                  onValueChange={(v) => setForm((p) => p && { ...p, frequencyType: v as "daily" | "custom" })}
+                  onValueChange={(v) => setForm((p) => p && {
+                    ...p,
+                    frequencyType: v as "daily" | "weekly" | "monthly" | "custom",
+                    customDays:
+                      v === "monthly" ? [p.customDays[0] && p.customDays[0] <= 28 ? p.customDays[0] : 1]
+                        : v === "weekly" ? (p.customDays.length ? p.customDays : [1])
+                          : v === "custom" ? (p.customDays.length ? p.customDays : [1, 2, 3, 4, 5])
+                            : [],
+                  })}
                   options={[
                     { value: "daily", label: t("clientReports.frequency.daily") },
+                    { value: "weekly", label: t("clientReports.frequency.weekly") },
+                    { value: "monthly", label: t("clientReports.frequency.monthly") },
                     { value: "custom", label: t("clientReports.frequency.custom") },
                   ]}
                 />
               </div>
-              {form.frequencyType === "custom" ? (
+              {form.frequencyType === "monthly" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="gr-month-day">{t("clientReports.field.monthDay")}</Label>
+                  <Input
+                    id="gr-month-day"
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={form.customDays[0] ?? 1}
+                    onChange={(e) => {
+                      const n = Math.min(28, Math.max(1, Number(e.target.value) || 1));
+                      setForm((p) => p && { ...p, customDays: [n] });
+                    }}
+                  />
+                </div>
+              ) : null}
+              {form.frequencyType === "custom" || form.frequencyType === "weekly" ? (
                 <div className="flex flex-wrap gap-2">
                   {WEEKDAYS.map((d) => (
                     <Button

@@ -21,6 +21,7 @@ import { SelectField } from "@/components/phase1/SelectField";
 import { buildClientHoldingsViewModel, emptyClientHoldingsViewModel } from "@/lib/clientHoldingsModel";
 import { useStoredPageSize } from "@/lib/tablePageSize";
 import { cn } from "@/lib/utils";
+import { CompanyTickerIcon } from "@/components/phase1/CompanyTickerIcon";
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat("en-QA", { style: "currency", currency: "QAR" }).format(val);
@@ -362,7 +363,10 @@ export default function CustomerDetailExt() {
                       <TableCell className="font-mono text-xs tabular-nums">{tx.invNo ?? "—"}</TableCell>
                       <TableCell>
                         <div className="cdp-stock">
-                          <b>{tx.ticker}</b>
+                          <span className="inline-flex items-center gap-2">
+                            <CompanyTickerIcon ticker={tx.ticker} companyName={tx.companyName} />
+                            <b>{tx.ticker}</b>
+                          </span>
                           <span>{tx.companyName}</span>
                         </div>
                       </TableCell>

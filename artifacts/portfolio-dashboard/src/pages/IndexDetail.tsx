@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 function formatNum(n: number | null | undefined) {
   if (n == null || !Number.isFinite(Number(n))) return "—";
@@ -67,7 +68,9 @@ function ConstituentSnapTable({
       <TableBody>
         {paging.paged.map((c) => (
           <TableRow key={c.stockId} className="clients-row">
-            <TableCell className="ps-5 font-mono font-semibold">{c.ticker ?? "—"}</TableCell>
+            <TableCell className="ps-5">
+              {c.ticker ? <TickerLabel ticker={c.ticker} companyName={c.companyName} /> : "—"}
+            </TableCell>
             <TableCell className="text-sm">{c.companyName ?? "—"}</TableCell>
             <TableCell className="text-xs text-muted-foreground">{c.sector ?? "—"}</TableCell>
             <TableCell className="pe-5 text-end font-data">{c.weightPct.toFixed(2)}%</TableCell>

@@ -59,6 +59,7 @@ import { ChangeChip } from "@/components/phase1/ChangeChip";
 import { StatsSummaryBar } from "@/components/phase1/StatsSummaryBar";
 import { CDP_TAB, CdpTabsList } from "@/components/phase1/CdpTabs";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
+import { CompanyTickerIcon } from "@/components/phase1/CompanyTickerIcon";
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat("en-QA", { style: "currency", currency: "QAR" }).format(val);
@@ -628,9 +629,12 @@ export default function StockDetail() {
       </Link>
 
       <header className="cdp-header">
-        <div className="cdp-title">
-          <h1>{stock.companyName}</h1>
-          <p>{stock.ticker} · {stock.sector || t("stockDetail.unclassifiedSector")}</p>
+        <div className="cdp-title flex items-start gap-3">
+          <CompanyTickerIcon ticker={stock.ticker} companyName={stock.companyName} className="mt-1 size-12 rounded-xl" />
+          <div>
+            <h1>{stock.companyName}</h1>
+            <p>{stock.ticker} · {stock.sector || t("stockDetail.unclassifiedSector")}</p>
+          </div>
         </div>
         <div className="cdp-header-actions">
           <span className="inline-flex h-10 items-center gap-2 rounded-[14px] border border-[#dfe6f6] bg-gradient-to-br from-white to-[#eef3fd] px-3 text-xs font-bold text-[#139366] shadow-[var(--cdp-shadow2)]">

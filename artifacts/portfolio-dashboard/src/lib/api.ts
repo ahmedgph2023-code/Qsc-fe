@@ -820,15 +820,85 @@ export function runSnapshots(asOf?: string): Promise<SnapshotCompareList & { qsc
 
 export type LiveBroadcastStatus = {
   configured: boolean;
-  connected: false;
-  ingestOfficialCloses: false;
-  valuationSource: "official_close";
+  connected: boolean;
+  sampleLoaded?: boolean;
+  quoteCount?: number;
+  indexCount?: number;
+  lastMessageAt?: string | null;
+  sessionOpen?: boolean;
+  ingestOfficialCloses: boolean;
+  valuationSource: "official_close" | "last_price_session";
   objectsNamedByQsc: string[];
-  blockedReason: "NO_BROADCAST_WS_URL" | "NO_JSON_SAMPLE";
+  blockedReason: "NO_BROADCAST_WS_URL" | "IDLE" | "NO_JSON_SAMPLE" | null;
+  hubUrl?: string | null;
+  sessionHoursQatar?: string;
+  exchange?: LiveExchangeSummary | null;
+};
+
+export type LiveExchangeSummary = {
+  exchangeId: string;
+  nameEn: string;
+  nameAr: string | null;
+  currentValue: number | null;
+  netChange: number | null;
+  netChangePerc: number | null;
+  volume: number | null;
+  turnOver: number | null;
+  symbolsUp: number | null;
+  symbolsDown: number | null;
+  symbolsUnchanged: number | null;
+  lastUpdateTime: string | null;
+};
+
+export type LiveQuote = {
+  symbol: string;
+  lastTradePrice: number;
+  closePrice: number | null;
+  openPrice?: number | null;
+  highPrice?: number | null;
+  lowPrice?: number | null;
+  netChange: number | null;
+  netChangePerc: number | null;
+  bidPrice?: number | null;
+  offerPrice?: number | null;
+  totalVolume?: number | null;
+  totalValue?: number | null;
+  companyName: string | null;
+  companyNameAr?: string | null;
+  sector?: string | null;
+  updatedAt: string;
+};
+
+export type LiveIndex = {
+  code: string;
+  nameEn: string;
+  nameAr: string | null;
+  current: number;
+  change: number | null;
+  changePerc: number | null;
+  high?: number | null;
+  low?: number | null;
+  updatedAt: string;
 };
 
 export function getLiveStatus(): Promise<LiveBroadcastStatus> {
   return fetchApi("/live/status");
+}
+
+export function getLiveQuotes(): Promise<{
+  items: LiveQuote[];
+  exchange: LiveExchangeSummary | null;
+  status: LiveBroadcastStatus;
+}> {
+  return fetchApi("/live/quotes");
+}
+
+export function getLiveIndices(): Promise<{ items: LiveIndex[]; status: LiveBroadcastStatus }> {
+  return fetchApi("/live/indices");
+}
+
+export function loadLiveSample(): Promise<{ ok: boolean; status: LiveBroadcastStatus }> {
+  return fetchApi("/live/load-sample", { method: "POST", body: "{}" });
 }
 
 export type ProductDecisionRow = {
@@ -2289,7 +2359,7 @@ export type ClientReportConfig = {
   recipientEmail: string | null;
   recipientPhone?: string | null;
   dataSections: ClientReportSection[];
-  frequencyType: "daily" | "custom";
+  frequencyType: "daily" | "weekly" | "monthly" | "custom";
   customDays: number[];
   sendTime: string;
   asOfMode: "latest" | "previous_trading_day";
@@ -2361,7 +2431,7 @@ export type ClientReportDeliveryStatus = {
 export type ClientReportGlobalConfig = {
   schedulingEnabled: boolean;
   dataSections: ClientReportSection[];
-  frequencyType: "daily" | "custom";
+  frequencyType: "daily" | "weekly" | "monthly" | "custom";
   customDays: number[];
   sendTime: string;
   asOfMode: "latest" | "previous_trading_day";
@@ -2499,7 +2569,7 @@ export function createClientReportConfig(body: {
   recipientEmail?: string | null;
   recipientPhone?: string | null;
   dataSections: ClientReportSection[];
-  frequencyType?: "daily" | "custom";
+  frequencyType?: "daily" | "weekly" | "monthly" | "custom";
   customDays?: number[];
   sendTime?: string;
   asOfMode?: "latest" | "previous_trading_day";
@@ -2516,7 +2586,7 @@ export function updateClientReportConfig(
     recipientEmail: string | null;
     recipientPhone: string | null;
     dataSections: ClientReportSection[];
-    frequencyType: "daily" | "custom";
+    frequencyType: "daily" | "weekly" | "monthly" | "custom";
     customDays: number[];
     sendTime: string;
     asOfMode: "latest" | "previous_trading_day";

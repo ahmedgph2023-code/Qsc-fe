@@ -12,14 +12,18 @@ import {
   useClientTablePage,
 } from "@/components/phase1/DataTableCard";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
+import { CompanyTickerIcon } from "@/components/phase1/CompanyTickerIcon";
 
 export type QuoteLogoTone = "blue" | "blue2" | "red" | "green";
 
 export type QuoteBoardRow = {
   id: string;
   href?: string;
+  /** Letter fallback when no ticker SVG (clients, indices). */
   logo: string;
   logoTone?: QuoteLogoTone;
+  /** When set, shows `/company-logos/{ticker}.svg` instead of letter badge. */
+  ticker?: string;
   title: string;
   subtitle?: string;
   meta?: ReactNode;
@@ -146,16 +150,25 @@ function QuoteAsset({
   className?: string;
 }) {
   const tone = row.logoTone || quoteLogoTone(row.id || row.title);
+  const logo = row.ticker ? (
+    <CompanyTickerIcon
+      ticker={row.ticker}
+      companyName={row.subtitle}
+      className="size-10 rounded-[12px] sm:size-11"
+    />
+  ) : (
+    <div
+      className={cn(
+        "grid size-10 shrink-0 place-items-center rounded-[12px] text-[10px] font-extrabold tracking-wide text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] sm:size-11 sm:text-[11px]",
+        LOGO_TONE_CLASS[tone],
+      )}
+    >
+      {row.logo}
+    </div>
+  );
   const inner = (
     <>
-      <div
-        className={cn(
-          "grid size-10 shrink-0 place-items-center rounded-[12px] text-[10px] font-extrabold tracking-wide text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] sm:size-11 sm:text-[11px]",
-          LOGO_TONE_CLASS[tone],
-        )}
-      >
-        {row.logo}
-      </div>
+      {logo}
       <div className="min-w-0">
         <div className="truncate text-[13px] font-bold leading-tight text-[#0e1837] group-hover:text-[#1760f3]">
           {row.title}

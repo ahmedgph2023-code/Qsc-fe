@@ -26,6 +26,7 @@ import { benchmarkNameFor, modelCodeFor, shariahGroupLabel, normalizePreference,
 import { useAuth } from "@/lib/AuthContext";
 import { canPerformAction } from "@/lib/access";
 import { PrintButton } from "@/components/phase1/PrintButton";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 
 type DraftHolding = { stockId: string; weight: number; sleeve: string };
 const STAGE_IDS = ["Setup", "Index", "Build", "Review", "Trades", "Save"] as const;
@@ -350,7 +351,7 @@ ${converted?.id ? `<p class="muted">${t("builder.printConverted", { code: conver
                   <TableBody>
                     {constituents.length ? constPaging.paged.map((c: any) => (
                       <TableRow key={`${c.stockId}-${c.effectiveDate}`}>
-                        <TableCell className="font-mono">{c.ticker}</TableCell>
+                        <TableCell><TickerLabel ticker={c.ticker} companyName={c.companyName} /></TableCell>
                         <TableCell>{c.companyName}</TableCell>
                         <TableCell>{c.sector}</TableCell>
                         <TableCell className="font-mono">{shariahGroupLabel(c.shariahGroup)}</TableCell>
@@ -493,7 +494,9 @@ ${converted?.id ? `<p class="muted">${t("builder.printConverted", { code: conver
                     {trades.length ? tradePaging.paged.map((trade, i) => (
                       <TableRow key={`${trade.stockId}-${tradePaging.start + i}`}>
                         <TableCell className={trade.side === "BUY" ? "text-emerald-400" : "text-rose-400"}>{trade.side}</TableCell>
-                        <TableCell className="font-mono">{trade.ticker || trade.stockId}</TableCell>
+                        <TableCell>
+                          <TickerLabel ticker={String(trade.ticker || trade.stockId || "")} />
+                        </TableCell>
                         <TableCell className="text-end font-data">{Number(trade.quantity).toLocaleString()}</TableCell>
                         <TableCell className="text-end font-data">{Number(trade.estimatedValue).toLocaleString("en-QA", { style: "currency", currency: "QAR" })}</TableCell>
                       </TableRow>

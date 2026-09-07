@@ -15,6 +15,7 @@ import { DatePicker } from "@/components/phase1/DatePicker";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { TickerLabel } from "@/components/phase1/CompanyTickerIcon";
 import { TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AppTable,
@@ -347,7 +348,9 @@ export function IndexConstituentsDialog({
                         const active = Number(w) > 0;
                         return (
                           <TableRow key={s.id} className={cn("clients-row", active && "bg-primary/5")}>
-                            <TableCell className="ps-5 font-mono text-sm font-semibold">{s.ticker}</TableCell>
+                            <TableCell className="ps-5">
+                              <TickerLabel ticker={s.ticker} companyName={s.companyName} />
+                            </TableCell>
                             <TableCell className="max-w-[220px] truncate text-sm">{s.companyName}</TableCell>
                             <TableCell className="text-xs text-muted-foreground">{s.sector}</TableCell>
                             <TableCell className="pe-5 text-end">
@@ -458,7 +461,7 @@ export function IndexConstituentsDialog({
                           <div className="min-h-0 flex-1 space-y-1 overflow-auto">
                             {snap.constituents.map((c) => (
                               <div key={c.stockId} className="flex items-center justify-between gap-2 text-xs">
-                                <span className="font-mono font-semibold">{c.ticker}</span>
+                                <TickerLabel ticker={c.ticker || "—"} iconClassName="size-5 rounded" />
                                 <span className="font-data text-muted-foreground">{c.weightPct.toFixed(2)}%</span>
                               </div>
                             ))}
