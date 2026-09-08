@@ -1509,8 +1509,20 @@
     "title": "Live market",
     "description": "QSC broadcast: Last Price for session portfolio MV. Historical as-of dates stay on official close. Session-end Last Price is saved as that day's close.",
     "emptyTitle": "No live quotes yet",
-    "emptyHint": "Load the meeting sample or set BROADCAST_WS_URL to the Hub feed.",
+    "emptyHint": "Waiting for live quotes from the broadcast feed (or server sample on startup).",
     "loadSample": "Load meeting sample",
+    "simulateTick": "Simulate ticks",
+    "persistCloses": "Save session closes",
+    "persistDone": "Saved {{count}} closes",
+    "closeSave": {
+      "label": "Official close save",
+      "hour": "Close-save hour",
+      "minute": "Close-save minute",
+      "at": "Closes saved at {{time}}",
+      "info": "At {{time}} the system takes the last Last Price and stores it as that day's official close."
+    },
+    "lastTick": "Last tick",
+    "lastRefresh": "Refreshed",
     "connected": "Feed active",
     "disconnected": "Feed idle",
     "quotesCount": "{{count}} symbols",
@@ -1521,7 +1533,7 @@
     "showingCount": "Showing {{shown}} of {{total}} symbols",
     "sessionOpen": "Session open",
     "sessionClosed": "Outside session",
-    "sampleNote": "Meeting sample may be flat (0 change / volume) until the live Hub is connected.",
+    "sampleNote": "Demo sample: volume / deals / open-high-low are often 0 (off-session snapshot). Live Hub numbers will differ from qe.com.qa until BROADCAST_WS_URL is connected.",
     "summaryAria": "Live market summary",
     "emptyFilterTitle": "No symbols match",
     "emptyFilterDesc": "Clear search or filters to see the full market watch.",
@@ -1536,28 +1548,39 @@
       "turnover": "Turnover (QAR)",
       "volume": "Volume",
       "breadth": "Advancers / decliners",
+      "deals": "Deals",
       "updated": "Last update",
-      "unchangedHint": "{{count}} unchanged"
+      "unchangedHint": "{{count}} unchanged",
+      "panelTitle": "Market snapshot",
+      "prevClose": "Previous close context"
     },
     "col": {
-      "lastPrice": "Last price",
-      "close": "Close",
+      "lastPrice": "Last",
+      "close": "Prev close",
+      "open": "Open",
+      "high": "High",
+      "low": "Low",
+      "range": "Day range",
       "change": "Change",
       "changePct": "Change %",
       "bid": "Bid",
+      "bidVol": "Bid vol",
       "offer": "Ask",
+      "offerVol": "Ask vol",
+      "trades": "Trades",
       "volume": "Volume",
       "value": "Value",
       "sector": "Sector",
-      "index": "Index"
+      "index": "Index",
+      "name": "Name"
     },
     "valuation": {
       "official_close": "Valuation: official close",
       "last_price_session": "Valuation: session last price"
     },
-    "valuationNote": "Intraday ticks are not written to stock_prices. At 15:05 Asia/Qatar the job saves Last Price as that day's official close (س-25). Depth and trade tape are received in the feed but deferred for a later phase.",
+    "valuationNote": "Intraday ticks are not written to stock_prices. At {{time}} the job saves Last Price as that day's official close (س-25). Depth and trade tape are received in the feed but deferred for a later phase.",
     "reason": {
-      "NO_BROADCAST_WS_URL": "Optional: set BROADCAST_WS_URL for the live Hub. Until then, use Load meeting sample.",
+      "NO_BROADCAST_WS_URL": "No Hub URL yet. The server may still load the meeting sample on startup; set BROADCAST_WS_URL for the live feed.",
       "NO_JSON_SAMPLE": "Waiting for JSON sample (meeting_3 BroadcastData.json is now available).",
       "IDLE": "Feed idle outside session hours or waiting for messages."
     }

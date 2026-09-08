@@ -63,6 +63,8 @@ export default function CustomerDetailExt() {
     queryFn: () => getExtClient(id!, asOf),
     enabled: !!id,
     placeholderData: keepPreviousData,
+    // Session MV: refresh while viewing today so Last Price ticks show on holdings.
+    refetchInterval: asOf === today ? 2_000 : false,
   });
 
   const {

@@ -58,10 +58,15 @@ export function useTablePageBusy(page: number, pageSize: number, ms = 160) {
 
 export const CLIENT_PAGE_SIZES = [10, 25, 50];
 
-export function useClientTablePage<T>(items: T[], resetKey = "") {
+export function useClientTablePage<T>(
+  items: T[],
+  resetKey = "",
+  pageSizes: number[] = CLIENT_PAGE_SIZES,
+) {
+  const sizes = pageSizes.length ? pageSizes : CLIENT_PAGE_SIZES;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSizeState] = useState(() =>
-    readStoredPageSize(CLIENT_PAGE_SIZES, CLIENT_PAGE_SIZES[0]),
+    readStoredPageSize(sizes, sizes[0]!),
   );
   const setPageSize = useCallback((size: number) => {
     setPageSizeState(size);
@@ -83,6 +88,11 @@ export function useClientTablePage<T>(items: T[], resetKey = "") {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
 
+  // If allowed sizes change and current size is invalid, snap to first.
+  useEffect(() => {
+    if (!sizes.includes(pageSize)) setPageSize(sizes[0]!);
+  }, [sizes, pageSize, setPageSize]);
+
   const start = total === 0 ? 0 : (safePage - 1) * pageSize;
   const paged = items.slice(start, start + pageSize);
   const busy = useTablePageBusy(safePage, pageSize);
@@ -90,7 +100,7 @@ export function useClientTablePage<T>(items: T[], resetKey = "") {
   return {
     page: safePage,
     pageSize,
-    pageSizes: CLIENT_PAGE_SIZES,
+    pageSizes: sizes,
     setPage,
     setPageSize,
     paged,

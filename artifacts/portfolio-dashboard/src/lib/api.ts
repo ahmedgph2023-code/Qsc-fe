@@ -833,6 +833,15 @@ export type LiveBroadcastStatus = {
   hubUrl?: string | null;
   sessionHoursQatar?: string;
   exchange?: LiveExchangeSummary | null;
+  closeSaveHour?: number;
+  closeSaveMinute?: number;
+  closeSaveLabel?: string;
+};
+
+export type LiveCloseSaveConfig = {
+  hour: number;
+  minute: number;
+  label?: string;
 };
 
 export type LiveExchangeSummary = {
@@ -847,6 +856,8 @@ export type LiveExchangeSummary = {
   symbolsUp: number | null;
   symbolsDown: number | null;
   symbolsUnchanged: number | null;
+  symbolsTraded?: number | null;
+  totalExecuted?: number | null;
   lastUpdateTime: string | null;
 };
 
@@ -861,6 +872,10 @@ export type LiveQuote = {
   netChangePerc: number | null;
   bidPrice?: number | null;
   offerPrice?: number | null;
+  bidVolume?: number | null;
+  offerVolume?: number | null;
+  lastTradeVolume?: number | null;
+  trades?: number | null;
   totalVolume?: number | null;
   totalValue?: number | null;
   companyName: string | null;
@@ -899,6 +914,31 @@ export function getLiveIndices(): Promise<{ items: LiveIndex[]; status: LiveBroa
 
 export function loadLiveSample(): Promise<{ ok: boolean; status: LiveBroadcastStatus }> {
   return fetchApi("/live/load-sample", { method: "POST", body: "{}" });
+}
+
+export function simulateLiveTicks(count = 8): Promise<{ ok: boolean; touched: string[]; status: LiveBroadcastStatus }> {
+  return fetchApi("/live/simulate-ticks", { method: "POST", body: JSON.stringify({ count }) });
+}
+
+export function persistLiveCloses(asOf?: string): Promise<{ ok: boolean; asOf: string; written: number }> {
+  return fetchApi("/live/persist-closes", {
+    method: "POST",
+    body: JSON.stringify(asOf ? { asOf } : {}),
+  });
+}
+
+export function getLiveCloseConfig(): Promise<LiveCloseSaveConfig & { status: LiveBroadcastStatus }> {
+  return fetchApi("/live/close-config");
+}
+
+export function setLiveCloseConfig(body: {
+  hour: number;
+  minute?: number;
+}): Promise<{ ok: boolean } & LiveCloseSaveConfig & { status: LiveBroadcastStatus }> {
+  return fetchApi("/live/close-config", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
 }
 
 export type ProductDecisionRow = {
