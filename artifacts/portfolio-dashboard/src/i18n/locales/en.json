@@ -1533,7 +1533,15 @@
     "showingCount": "Showing {{shown}} of {{total}} symbols",
     "sessionOpen": "Session open",
     "sessionClosed": "Outside session",
-    "sampleNote": "Demo sample: volume / deals / open-high-low are often 0 (off-session snapshot). Live Hub numbers will differ from qe.com.qa until BROADCAST_WS_URL is connected.",
+    "sampleNote": "Meeting BroadcastData sample (not Hub / not live QSE): Trades / Volume / Value are often 0. Prices may tick for QA only. Backend tries qe.com.qa public Market Watch first when Hub is missing.",
+    "qsePublicNote": "Live quotes from QSE public Market Watch (qe.com.qa mw.php). Hub WebSocket still preferred when BROADCAST_WS_URL is set.",
+    "detail": {
+      "title": "Symbol details",
+      "hint": "Click a row in Market Watch to inspect it here.",
+      "clear": "Clear",
+      "lastTradeVol": "Last trade vol",
+      "updated": "Updated"
+    },
     "summaryAria": "Live market summary",
     "emptyFilterTitle": "No symbols match",
     "emptyFilterDesc": "Clear search or filters to see the full market watch.",

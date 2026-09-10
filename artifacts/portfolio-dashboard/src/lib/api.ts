@@ -822,6 +822,7 @@ export type LiveBroadcastStatus = {
   configured: boolean;
   connected: boolean;
   sampleLoaded?: boolean;
+  feedSource?: "hub" | "qse_public" | "sample" | "none";
   quoteCount?: number;
   indexCount?: number;
   lastMessageAt?: string | null;

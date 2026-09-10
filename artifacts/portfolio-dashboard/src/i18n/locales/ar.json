@@ -1537,7 +1537,15 @@
     "showingCount": "عرض {{shown}} من {{total}} رمز",
     "sessionOpen": "الجلسة مفتوحة",
     "sessionClosed": "خارج الجلسة",
-    "sampleNote": "عيّنة تجريبية: الحجم/الصفقات/افتتاح-أعلى-أدنى غالباً ٠ (لقطة خارج الجلسة). أرقام موقع البورصة تختلف حتى ربط BROADCAST_WS_URL.",
+    "sampleNote": "عيّنة BroadcastData (ليست Hub وليس البث الرسمي): الصفقات/الحجم/القيمة غالباً ٠. الأسعار قد تتحرك للتجربة. عند غياب Hub يحاول الخادم أولاً موقع البورصة.",
+    "qsePublicNote": "أسعار حية من Market Watch العام على qe.com.qa (mw.php). WebSocket الـ Hub يبقى المفضّل عند ضبط BROADCAST_WS_URL.",
+    "detail": {
+      "title": "تفاصيل الرمز",
+      "hint": "انقر صفًا في مراقبة السوق لعرضه هنا.",
+      "clear": "إلغاء",
+      "lastTradeVol": "حجم آخر صفقة",
+      "updated": "تحديث"
+    },
     "summaryAria": "ملخص السوق الحي",
     "emptyFilterTitle": "لا رموز مطابقة",
     "emptyFilterDesc": "امسح البحث أو الفلاتر لعرض مراقبة السوق كاملة.",

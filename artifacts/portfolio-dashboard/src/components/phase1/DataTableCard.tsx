@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Filter, Inbox, Search } from "lucide-react";
 import { Table, TableCell, TableHead, TableRow } from "@/components/ui/table";
 import { TablePageFooter } from "@/components/phase1/TablePageFooter";
@@ -197,6 +197,7 @@ export function AppTable({
   tableClassName,
   wrapClassName,
   loading,
+  style,
 }: {
   children: ReactNode;
   toolbar?: ReactNode;
@@ -205,9 +206,14 @@ export function AppTable({
   tableClassName?: string;
   wrapClassName?: string;
   loading?: boolean;
+  style?: CSSProperties;
 }) {
   return (
-    <section className={cn("clients-table-card overflow-hidden", className)} aria-busy={loading || undefined}>
+    <section
+      className={cn("clients-table-card overflow-hidden", className)}
+      style={style}
+      aria-busy={loading || undefined}
+    >
       {toolbar}
       <Table
         wrapClassName={cn("clients-table-wrap overflow-x-auto", wrapClassName)}
