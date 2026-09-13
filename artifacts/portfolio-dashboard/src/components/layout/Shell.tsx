@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, LineChart, TrendingUp, LogOut, Menu,
   Blocks, RefreshCw, ShieldCheck, TriangleAlert,
   Search, FileText, UserCog, Scale, Radio, ClipboardList, Settings, MessageCircle,
-  ChevronRight,
+  ChevronRight, Receipt, BriefcaseBusiness, ListOrdered,
   type LucideIcon,
 } from "lucide-react";
 import { getFeePendingCount } from "@/lib/api";
@@ -47,6 +47,9 @@ const NAV_GROUPS: Array<{
   ]},
   { labelKey: "nav.groups.control", items: [
     { href: "/statements", labelKey: "nav.items.statements", icon: FileText },
+    { href: "/invoice-report", labelKey: "nav.items.invoiceReport", icon: Receipt },
+    { href: "/firm-portfolio", labelKey: "nav.items.firmPortfolio", icon: BriefcaseBusiness },
+    { href: "/investment-orders", labelKey: "nav.items.investmentOrders", icon: ListOrdered },
     { href: "/balances", labelKey: "nav.items.balances", icon: Scale },
     { href: "/live", labelKey: "nav.items.live", icon: Radio },
     { href: "/workshop", labelKey: "nav.items.workshop", icon: ClipboardList },

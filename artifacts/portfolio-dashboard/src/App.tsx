@@ -17,6 +17,9 @@ import CustomerDetail from "@/pages/CustomerDetail";
 import CustomersExt from "@/pages/CustomersExt";
 import CustomerDetailExt from "@/pages/CustomerDetailExt";
 import Statements from "@/pages/Statements";
+import InvoiceReport from "@/pages/InvoiceReport";
+import FirmPortfolio from "@/pages/FirmPortfolio";
+import InvestmentOrders from "@/pages/InvestmentOrders";
 import Balances from "@/pages/Balances";
 import LiveMarket from "@/pages/LiveMarket";
 import ProductDecisions from "@/pages/ProductDecisions";
@@ -101,6 +104,9 @@ function Router() {
       <Route path="/orders" component={() => <ProtectedRoute path="/orders" component={OrdersPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute path="/reports" component={ReportsPage} />} />
       <Route path="/statements" component={() => <ProtectedRoute path="/statements" component={Statements} />} />
+      <Route path="/invoice-report" component={() => <ProtectedRoute path="/invoice-report" component={InvoiceReport} />} />
+      <Route path="/firm-portfolio" component={() => <ProtectedRoute path="/firm-portfolio" component={FirmPortfolio} />} />
+      <Route path="/investment-orders" component={() => <ProtectedRoute path="/investment-orders" component={InvestmentOrders} />} />
       <Route path="/balances" component={() => <ProtectedRoute path="/balances" component={Balances} />} />
       <Route path="/live" component={() => <ProtectedRoute path="/live" component={LiveMarket} />} />
       <Route path="/workshop" component={() => <ProtectedRoute path="/workshop" component={ProductDecisions} />} />

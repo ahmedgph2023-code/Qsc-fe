@@ -94,6 +94,8 @@ export type PortfolioStatementFooter = {
   netProfitLoss: StatementMoney;
   netAssetValue: StatementMoney;
   cashLedgerBalance: StatementMoney;
+  /** Total Asset = Market Value + Client Balance (cash). */
+  totalAsset: StatementMoney;
 };
 
 export type PortfolioStatement = {

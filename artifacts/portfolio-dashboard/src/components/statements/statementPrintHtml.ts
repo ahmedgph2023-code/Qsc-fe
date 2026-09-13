@@ -258,54 +258,35 @@ function portfolioClientRow(stmt: PortfolioStatement) {
 
 function portfolioPage2(stmt: PortfolioStatement) {
   const f = stmt.footer;
-  const cash = f.clientNetCashBalance.value;
   const mv = stmt.grandTotalMarketValue;
-  const portfolioValue = mv != null && cash != null ? mv + cash : null;
-  const expectedTotal =
-    f.expectedProfitLoss.value != null && f.currencyDifference.value != null
-      ? f.expectedProfitLoss.value + f.currencyDifference.value
-      : f.expectedProfitLoss.value;
   return `
     <div class="page-break"></div>
     <table class="page2">
       <thead>
         <tr>
-          <th>Market Value</th><th>Expected Sell Comm.</th><th>Net (Market Value - Comm)</th>
-          <th>Cash Balance</th><th>Total</th>
+          <th>Market Value</th><th>Expected Sell Comm.</th><th>Expected P/L</th>
+          <th>Dr/Cr Balance</th><th>Total Asset</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="num">${num(mv)}</td>
           <td class="num">${money(f.expectedSellCommission)}</td>
-          <td class="num">${money(f.netAfterExpectedSellComm)}</td>
-          <td class="num">${money(f.clientNetCashBalance)}</td>
-          <td class="num">${portfolioValue == null ? "" : signedNum(portfolioValue)}</td>
+          <td class="num">${money(f.expectedProfitLoss)}</td>
+          <td class="num">${money(f.drCrBalance)}</td>
+          <td class="num">${money(f.totalAsset)}</td>
         </tr>
         <tr class="section"><td colspan="5">Realized Profit/Loss</td></tr>
         <tr>
-          <th>Trading P/L</th><th>Dividends Received</th><th>Dividends Receivable</th><th colspan="2">Total</th>
+          <th>Trading P/L</th><th colspan="3">Realized total</th><th>Total</th>
         </tr>
         <tr>
-          <td class="num">${signedMoney(f.realizedTradingPl)}</td>
-          <td class="num">${money(f.receivedProfits)}</td>
-          <td class="num">${money(f.nonReceivedProfits)}</td>
-          <td class="num" colspan="2">${signedMoney(f.realizedTotal)}</td>
-        </tr>
-        <tr class="section"><td colspan="5">Expected Profit/Loss</td></tr>
-        <tr>
-          <th>Trading P/L</th><th>Currency Variation</th><th>Total</th><th>Net Profit/Loss</th><th>Portfolio Value</th>
-        </tr>
-        <tr>
-          <td class="num">${signedMoney(f.expectedProfitLoss)}</td>
-          <td class="num">${money(f.currencyDifference)}</td>
-          <td class="num">${expectedTotal == null ? "" : signedNum(expectedTotal)}</td>
-          <td class="num summary">${signedMoney(f.netProfitLoss)}</td>
-          <td class="num summary">${portfolioValue == null ? "" : signedNum(portfolioValue)}</td>
+          <td class="num">${money(f.realizedTradingPl)}</td>
+          <td class="num" colspan="3">${money(f.realizedTotal)}</td>
+          <td class="num">${money(f.realizedTotal)}</td>
         </tr>
       </tbody>
-    </table>
-    <p class="end-report">End of Report</p>`;
+    </table>`;
 }
 
 function portfolioBody(stmt: PortfolioStatement) {

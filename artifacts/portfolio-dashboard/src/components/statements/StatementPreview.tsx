@@ -196,6 +196,19 @@ export function PortfolioStatementStats({ stmt }: { stmt: PortfolioStatement }) 
       hint: stmt.grandTotalMarketValue == null ? unsigned : fromLedger,
     },
     {
+      id: "expectedPl",
+      icon: "/chart.png",
+      label: t("statements.footer.expectedPl"),
+      value: moneyKpi(f.expectedProfitLoss),
+      hint: f.expectedProfitLoss.value == null ? unsigned : fromLedger,
+      valueClassName:
+        f.expectedProfitLoss.value == null
+          ? undefined
+          : f.expectedProfitLoss.value >= 0
+            ? "text-[var(--color-positive)]"
+            : "text-loss",
+    },
+    {
       id: "sellComm",
       icon: "/chart.png",
       label: t("statements.footer.expectedSellComm"),
@@ -210,27 +223,6 @@ export function PortfolioStatementStats({ stmt }: { stmt: PortfolioStatement }) 
       hint: f.drCrBalance.value == null ? unsigned : fromLedger,
     },
     {
-      id: "netCash",
-      icon: "/Cash-2.png",
-      label: t("statements.footer.clientNetCash"),
-      value: moneyKpi(f.clientNetCashBalance),
-      hint: f.clientNetCashBalance.value == null ? unsigned : fromLedger,
-    },
-    {
-      id: "nav",
-      icon: "/Holdings + cash.png",
-      label: t("statements.footer.nav"),
-      value: moneyKpi(f.netAssetValue),
-      hint: f.netAssetValue.value == null ? unsigned : fromLedger,
-    },
-    {
-      id: "cashLedger",
-      icon: "/Net cash invested.png",
-      label: t("statements.footer.cashLedger"),
-      value: moneyKpi(f.cashLedgerBalance),
-      hint: f.cashLedgerBalance.value == null ? unsigned : fromLedger,
-    },
-    {
       id: "realized",
       icon: "/Realized P&L.png",
       label: t("statements.footer.realizedTrading"),
@@ -242,6 +234,26 @@ export function PortfolioStatementStats({ stmt }: { stmt: PortfolioStatement }) 
           : f.realizedTradingPl.value >= 0
             ? "text-[var(--color-positive)]"
             : "text-loss",
+    },
+    {
+      id: "realizedTotal",
+      icon: "/Realized P&L.png",
+      label: t("statements.footer.realizedTotal"),
+      value: moneyKpi(f.realizedTotal),
+      hint: f.realizedTotal.value == null ? unsigned : fromLedger,
+      valueClassName:
+        f.realizedTotal.value == null
+          ? undefined
+          : f.realizedTotal.value >= 0
+            ? "text-[var(--color-positive)]"
+            : "text-loss",
+    },
+    {
+      id: "totalAsset",
+      icon: "/Holdings + cash.png",
+      label: t("statements.footer.totalAsset"),
+      value: moneyKpi(f.totalAsset),
+      hint: f.totalAsset.value == null ? unsigned : t("statements.footer.totalAssetHint"),
     },
   ];
 

@@ -770,6 +770,192 @@ export async function downloadStatementExcel(
   URL.revokeObjectURL(url);
 }
 
+export type InvoiceReportRow = {
+  invSequence: number | null;
+  orderSide: "Buy" | "Sell";
+  invType: "OI" | "OC";
+  accountId: number;
+  nin: string;
+  accountName: string;
+  accountType: string | null;
+  ticker: string;
+  company: string;
+  market: string;
+  tradeDate: string;
+  qty: number;
+  buyQty: number;
+  sellQty: number;
+  priceAvg: number;
+  amount: number;
+  totalComm: number;
+  officeComm: number;
+  marketComm: number;
+  net: number;
+};
+
+export type InvoiceReportResult = {
+  title: string;
+  from: string;
+  to: string;
+  filters: { clientId: number | null; ticker: string | null };
+  rows: InvoiceReportRow[];
+  totals: {
+    amount: number;
+    totalComm: number;
+    officeComm: number;
+    marketComm: number;
+    net: number;
+    qty: number;
+    buyQty: number;
+    sellQty: number;
+    count: number;
+  };
+};
+
+export function getInvoiceReport(input: {
+  from: string;
+  to: string;
+  clientId?: string;
+  ticker?: string;
+}): Promise<InvoiceReportResult> {
+  const q = new URLSearchParams();
+  q.set("from", input.from);
+  q.set("to", input.to);
+  if (input.clientId) q.set("clientId", input.clientId);
+  if (input.ticker) q.set("ticker", input.ticker);
+  return fetchApi(`/ext/investment/invoices?${q.toString()}`);
+}
+
+export async function downloadInvoiceReportExcel(input: {
+  from: string;
+  to: string;
+  clientId?: string;
+  ticker?: string;
+}) {
+  const q = new URLSearchParams();
+  q.set("from", input.from);
+  q.set("to", input.to);
+  if (input.clientId) q.set("clientId", input.clientId);
+  if (input.ticker) q.set("ticker", input.ticker);
+  const res = await fetch(`${API_BASE}/ext/investment/invoices.xlsx?${q.toString()}`, {
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Export failed" }));
+    throw new Error(err.message || err.error || "Export failed");
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] || "CustomerInvoices.xlsx";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export type FirmPortfolioStock = {
+  ticker: string;
+  companyName: string;
+  securityNumber: number | null;
+  clientCount: number;
+  totalQuantity: number;
+  totalCost: number;
+  marketPrice: number | null;
+  marketValue: number | null;
+  unrealizedPl: number | null;
+  returnPct: number | null;
+  realizedPl: number;
+};
+
+export type FirmPortfolioResult = {
+  asOf: string;
+  accountTypeFilter: string;
+  clientCount: number;
+  stocks: FirmPortfolioStock[];
+  totals: {
+    totalQuantity: number;
+    totalCost: number;
+    marketValue: number;
+    unrealizedPl: number;
+    realizedPl: number;
+  };
+};
+
+export type FirmPortfolioHolder = {
+  ticker: string;
+  companyName: string;
+  clientId: number;
+  clientName: string;
+  nin: string;
+  quantity: number;
+  cost: number;
+  costPrice: number;
+  marketPrice: number | null;
+  marketValue: number | null;
+  unrealizedPl: number | null;
+  returnPct: number | null;
+  realizedPl: number;
+};
+
+export type FirmPortfolioDrilldown = {
+  asOf: string;
+  ticker: string;
+  companyName: string;
+  holders: FirmPortfolioHolder[];
+  totals: {
+    totalQuantity: number;
+    totalCost: number;
+    marketValue: number;
+    unrealizedPl: number;
+    realizedPl: number;
+  };
+};
+
+export function getFirmPortfolio(asOf: string): Promise<FirmPortfolioResult> {
+  return fetchApi(`/ext/investment/portfolio?asOf=${encodeURIComponent(asOf)}`);
+}
+
+export function getFirmPortfolioDrilldown(asOf: string, ticker: string): Promise<FirmPortfolioDrilldown> {
+  return fetchApi(`/ext/investment/portfolio/${encodeURIComponent(ticker)}?asOf=${encodeURIComponent(asOf)}`);
+}
+
+export type InvestmentOrderRow = {
+  orderNumber: string;
+  orderType: string;
+  clientId: number | null;
+  clientName: string;
+  nin: string | null;
+  ticker: string;
+  companyName: string | null;
+  statusCode: string;
+  statusLabel: string;
+  orderDate: string | null;
+  totalQty: number | null;
+  remainingQty: number | null;
+  executedQty: number | null;
+  displayedQty: number | null;
+  orderValue: number | null;
+  validity: { kind: "Daily" } | { kind: "Date"; until: string | null };
+};
+
+export type InvestmentOrdersResult = {
+  polledAtIso: string;
+  tableFound: boolean;
+  columns: string[];
+  rows: InvestmentOrderRow[];
+  warning: string | null;
+};
+
+export function getInvestmentClientOrders(status?: string): Promise<InvestmentOrdersResult> {
+  const q = new URLSearchParams();
+  if (status) q.set("status", status);
+  const qs = q.toString();
+  return fetchApi(`/ext/investment/orders${qs ? `?${qs}` : ""}`);
+}
+
 export type SnapshotMatchStatus = "matched" | "cash_only" | "mismatch" | "incomplete" | "qsc_missing";
 
 export type SnapshotCompareRow = {
