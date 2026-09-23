@@ -770,21 +770,28 @@ export async function downloadStatementExcel(
   URL.revokeObjectURL(url);
 }
 
+export type InvoiceOrderTypeFilter = "all" | "buy" | "sell";
+
+export type InvoiceClientOption = {
+  clientId: number;
+  nin: string;
+  name: string;
+  invoiceCount: number;
+};
+
 export type InvoiceReportRow = {
   invSequence: number | null;
+  invNo: number | null;
   orderSide: "Buy" | "Sell";
   invType: "OI" | "OC";
   accountId: number;
   nin: string;
   accountName: string;
-  accountType: string | null;
   ticker: string;
   company: string;
   market: string;
   tradeDate: string;
   qty: number;
-  buyQty: number;
-  sellQty: number;
   priceAvg: number;
   amount: number;
   totalComm: number;
@@ -797,7 +804,12 @@ export type InvoiceReportResult = {
   title: string;
   from: string;
   to: string;
-  filters: { clientId: number | null; ticker: string | null };
+  filters: {
+    clientId: number | null;
+    ticker: string | null;
+    orderType: InvoiceOrderTypeFilter;
+    invNo: number | null;
+  };
   rows: InvoiceReportRow[];
   totals: {
     amount: number;
@@ -806,38 +818,52 @@ export type InvoiceReportResult = {
     marketComm: number;
     net: number;
     qty: number;
-    buyQty: number;
-    sellQty: number;
     count: number;
   };
 };
 
-export function getInvoiceReport(input: {
+export type InvoiceReportQuery = {
   from: string;
   to: string;
   clientId?: string;
   ticker?: string;
-}): Promise<InvoiceReportResult> {
+  orderType?: InvoiceOrderTypeFilter;
+  invNo?: string;
+};
+
+function invoiceReportParams(input: InvoiceReportQuery): URLSearchParams {
   const q = new URLSearchParams();
   q.set("from", input.from);
   q.set("to", input.to);
   if (input.clientId) q.set("clientId", input.clientId);
   if (input.ticker) q.set("ticker", input.ticker);
-  return fetchApi(`/ext/investment/invoices?${q.toString()}`);
+  if (input.orderType && input.orderType !== "all") q.set("orderType", input.orderType);
+  if (input.invNo) q.set("invNo", input.invNo);
+  return q;
 }
 
-export async function downloadInvoiceReportExcel(input: {
+export function getInvoiceReport(input: InvoiceReportQuery): Promise<InvoiceReportResult> {
+  return fetchApi(`/ext/investment/invoices?${invoiceReportParams(input).toString()}`);
+}
+
+/** Customers that actually have invoices inside the selected period. */
+export function getInvoiceReportClients(input: {
   from: string;
   to: string;
-  clientId?: string;
   ticker?: string;
-}) {
+  orderType?: InvoiceOrderTypeFilter;
+}): Promise<InvoiceClientOption[]> {
   const q = new URLSearchParams();
   q.set("from", input.from);
   q.set("to", input.to);
-  if (input.clientId) q.set("clientId", input.clientId);
   if (input.ticker) q.set("ticker", input.ticker);
-  const res = await fetch(`${API_BASE}/ext/investment/invoices.xlsx?${q.toString()}`, {
+  if (input.orderType && input.orderType !== "all") q.set("orderType", input.orderType);
+  return fetchApi(`/ext/investment/invoices/clients?${q.toString()}`);
+}
+
+/** Fetches an export endpoint with the auth header and saves it to disk. */
+async function downloadExport(path: string, fallbackName: string) {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
   });
   if (!res.ok) {
@@ -846,8 +872,7 @@ export async function downloadInvoiceReportExcel(input: {
   }
   const blob = await res.blob();
   const disposition = res.headers.get("Content-Disposition") || "";
-  const match = disposition.match(/filename="?([^"]+)"?/);
-  const filename = match?.[1] || "CustomerInvoices.xlsx";
+  const filename = disposition.match(/filename="?([^"]+)"?/)?.[1] || fallbackName;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -856,9 +881,24 @@ export async function downloadInvoiceReportExcel(input: {
   URL.revokeObjectURL(url);
 }
 
+export function downloadInvoiceReportPdf(input: InvoiceReportQuery) {
+  return downloadExport(
+    `/ext/investment/invoices.pdf?${invoiceReportParams(input).toString()}`,
+    "CustomerInvoices.pdf",
+  );
+}
+
+export function downloadInvoiceReportExcel(input: InvoiceReportQuery) {
+  return downloadExport(
+    `/ext/investment/invoices.xlsx?${invoiceReportParams(input).toString()}`,
+    "CustomerInvoices.xlsx",
+  );
+}
+
 export type FirmPortfolioStock = {
   ticker: string;
   companyName: string;
+  sector: string | null;
   securityNumber: number | null;
   clientCount: number;
   totalQuantity: number;
@@ -868,6 +908,18 @@ export type FirmPortfolioStock = {
   unrealizedPl: number | null;
   returnPct: number | null;
   realizedPl: number;
+  stockPct: number | null;
+  sectorPct: number | null;
+};
+
+export type FirmPortfolioSector = {
+  sector: string;
+  stockCount: number;
+  totalCost: number;
+  marketValue: number | null;
+  unrealizedPl: number | null;
+  realizedPl: number;
+  sectorPct: number | null;
 };
 
 export type FirmPortfolioResult = {
@@ -875,6 +927,7 @@ export type FirmPortfolioResult = {
   accountTypeFilter: string;
   clientCount: number;
   stocks: FirmPortfolioStock[];
+  sectors: FirmPortfolioSector[];
   totals: {
     totalQuantity: number;
     totalCost: number;
@@ -887,6 +940,7 @@ export type FirmPortfolioResult = {
 export type FirmPortfolioHolder = {
   ticker: string;
   companyName: string;
+  sector: string | null;
   clientId: number;
   clientName: string;
   nin: string;
@@ -898,12 +952,15 @@ export type FirmPortfolioHolder = {
   unrealizedPl: number | null;
   returnPct: number | null;
   realizedPl: number;
+  holderPct: number | null;
 };
 
 export type FirmPortfolioDrilldown = {
   asOf: string;
   ticker: string;
   companyName: string;
+  sector: string | null;
+  marketPrice: number | null;
   holders: FirmPortfolioHolder[];
   totals: {
     totalQuantity: number;
@@ -920,6 +977,20 @@ export function getFirmPortfolio(asOf: string): Promise<FirmPortfolioResult> {
 
 export function getFirmPortfolioDrilldown(asOf: string, ticker: string): Promise<FirmPortfolioDrilldown> {
   return fetchApi(`/ext/investment/portfolio/${encodeURIComponent(ticker)}?asOf=${encodeURIComponent(asOf)}`);
+}
+
+export function downloadFirmPortfolio(asOf: string, format: "xlsx" | "pdf") {
+  return downloadExport(
+    `/ext/investment/portfolio.${format}?asOf=${encodeURIComponent(asOf)}`,
+    `FirmPortfolio_${asOf}.${format}`,
+  );
+}
+
+export function downloadFirmPortfolioHolders(asOf: string, ticker: string, format: "xlsx" | "pdf") {
+  return downloadExport(
+    `/ext/investment/portfolio/${encodeURIComponent(ticker)}.${format}?asOf=${encodeURIComponent(asOf)}`,
+    `StockHolders_${ticker}_${asOf}.${format}`,
+  );
 }
 
 export type InvestmentOrderRow = {
@@ -949,11 +1020,117 @@ export type InvestmentOrdersResult = {
   warning: string | null;
 };
 
-export function getInvestmentClientOrders(status?: string): Promise<InvestmentOrdersResult> {
+/** Filter bar of the detailed current-orders table. */
+export type InvestmentOrderFilters = {
+  orderType?: "all" | "buy" | "sell";
+  ticker?: string;
+  status?: string;
+  validity?: string;
+  orderNo?: string;
+  clientId?: string;
+  q?: string;
+};
+
+export type InvestmentOrderListResult = InvestmentOrdersResult & {
+  total: number;
+  filtered: number;
+  options: {
+    tickers: string[];
+    statuses: Array<{ code: string; label: string }>;
+    validities: string[];
+  };
+};
+
+export function getInvestmentClientOrders(
+  filters: InvestmentOrderFilters = {},
+): Promise<InvestmentOrderListResult> {
   const q = new URLSearchParams();
-  if (status) q.set("status", status);
+  if (filters.orderType && filters.orderType !== "all") q.set("orderType", filters.orderType);
+  if (filters.ticker) q.set("ticker", filters.ticker);
+  if (filters.status) q.set("status", filters.status);
+  if (filters.validity) q.set("validity", filters.validity);
+  if (filters.orderNo) q.set("orderNo", filters.orderNo);
+  if (filters.clientId) q.set("clientId", filters.clientId);
+  if (filters.q) q.set("q", filters.q);
   const qs = q.toString();
   return fetchApi(`/ext/investment/orders${qs ? `?${qs}` : ""}`);
+}
+
+/** The three groupings of the Daily Executions panel. */
+export type ExecutionsView = "client_stock" | "stock" | "client";
+
+export type ExecutionSummaryRow = {
+  clientId: number | null;
+  clientName: string | null;
+  nin: string | null;
+  ticker: string | null;
+  companyName: string | null;
+  buyQty: number;
+  buyValue: number;
+  avgBuyPrice: number | null;
+  sellQty: number;
+  sellValue: number;
+  avgSellPrice: number | null;
+  totalValue: number;
+};
+
+export type ExecutionsSummary = {
+  asOf: string;
+  view: ExecutionsView;
+  rows: ExecutionSummaryRow[];
+  clientSubtotals: ExecutionSummaryRow[];
+  totals: Omit<ExecutionSummaryRow, "clientId" | "clientName" | "nin" | "ticker" | "companyName">;
+  executionCount: number;
+};
+
+export function getExecutionsSummary(asOf: string, view: ExecutionsView): Promise<ExecutionsSummary> {
+  return fetchApi(
+    `/ext/investment/orders/summary?asOf=${encodeURIComponent(asOf)}&view=${encodeURIComponent(view)}`,
+  );
+}
+
+export type AvailableBalanceRow = {
+  clientId: number;
+  clientName: string;
+  nin: string | null;
+  balance: number;
+  hasOpenOrders: boolean;
+  executedToday: boolean;
+};
+
+export type AvailableBalances = {
+  asOf: string;
+  /** Pending client confirmation on whether open buys are netted off. */
+  balanceBasis: "cash_ledger";
+  rows: AvailableBalanceRow[];
+  totalBalance: number;
+  warning: string | null;
+};
+
+export function getOrderBalances(asOf: string): Promise<AvailableBalances> {
+  return fetchApi(`/ext/investment/orders/balances?asOf=${encodeURIComponent(asOf)}`);
+}
+
+export type PendingBoardRow = {
+  ticker: string;
+  companyName: string | null;
+  side: "Buy" | "Sell";
+  orderCount: number;
+  qty: number;
+  executedQty: number;
+  remainQty: number;
+};
+
+export type PendingBoard = {
+  polledAtIso: string;
+  rows: PendingBoardRow[];
+  buyOrderCount: number;
+  sellOrderCount: number;
+  warning: string | null;
+};
+
+export function getPendingOrdersBoard(): Promise<PendingBoard> {
+  return fetchApi(`/ext/investment/orders/pending-board`);
 }
 
 export type SnapshotMatchStatus = "matched" | "cash_only" | "mismatch" | "incomplete" | "qsc_missing";
@@ -1012,12 +1189,25 @@ export type LiveBroadcastStatus = {
   quoteCount?: number;
   indexCount?: number;
   lastMessageAt?: string | null;
+  feedAgeSeconds?: number | null;
+  staleAfterSeconds?: number;
+  stale?: boolean;
+  valuationTrusted?: boolean;
+  syntheticTicks?: boolean;
   sessionOpen?: boolean;
   ingestOfficialCloses: boolean;
   valuationSource: "official_close" | "last_price_session";
   objectsNamedByQsc: string[];
-  blockedReason: "NO_BROADCAST_WS_URL" | "IDLE" | "NO_JSON_SAMPLE" | null;
+  blockedReason:
+    | "NO_BROADCAST_WS_URL"
+    | "IDLE"
+    | "NO_JSON_SAMPLE"
+    | "STALE_FEED"
+    | "UNTRUSTED_FEED"
+    | null;
   hubUrl?: string | null;
+  hubUrls?: string[];
+  hubTransport?: "signalr_ws_skip_negotiation" | "signalr_negotiate" | "websocket" | null;
   sessionHoursQatar?: string;
   exchange?: LiveExchangeSummary | null;
   closeSaveHour?: number;

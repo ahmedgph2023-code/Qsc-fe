@@ -23,9 +23,25 @@ import {
 import { CompanyTickerIcon } from "@/components/phase1/CompanyTickerIcon";
 import { cn } from "@/lib/utils";
 
-const FLASH_MS = 1200;
-/** Pulse Last only — do not grey Bid/Offer (that looked like a broken hover blotch). */
-const FLASH_LAST = "ring-2 ring-inset ring-white/80 brightness-110 transition-[filter,box-shadow] duration-300";
+/** Client (17 Sep 2026): any cell that changes flashes yellow for ~2.5s, then fades back. */
+const FLASH_MS = 2500;
+const FLASH_CELL =
+  "!bg-[#ffe680] !text-[#3d2c00] transition-colors duration-700";
+/** Quote fields worth flashing — a change in any of them is news to a dealer. */
+const FLASH_FIELDS = [
+  "lastTradePrice",
+  "closePrice",
+  "bidPrice",
+  "bidVolume",
+  "offerPrice",
+  "offerVolume",
+  "trades",
+  "totalVolume",
+  "totalValue",
+  "netChange",
+  "netChangePerc",
+] as const satisfies readonly (keyof LiveQuote)[];
+type FlashField = (typeof FLASH_FIELDS)[number];
 const LIVE_POLL_MS = 500;
 const LIVE_PAGE_SIZES = [10, 25, 50, 100, 200];
 const COLS = 13;
@@ -74,6 +90,10 @@ function changeTone(dir: number): string {
 function changeClass(n: number | null | undefined): string {
   if (n == null || n === 0) return "text-muted-foreground";
   return n > 0 ? "text-gain" : "text-loss";
+}
+
+function flashKey(symbol: string, field: FlashField): string {
+  return `${symbol}\0${field}`;
 }
 
 function quoteSearchHaystack(row: LiveQuote): string {
@@ -128,14 +148,13 @@ export default function LiveMarket() {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [flashUntil, setFlashUntil] = useState<Record<string, number>>({});
   const [, setFlashTick] = useState(0);
-  const prevPrices = useRef<Map<string, number>>(new Map());
+  const prevRows = useRef<Map<string, LiveQuote>>(new Map());
   const ar = i18n.language?.startsWith("ar");
   const now = Date.now();
 
   const {
     data: status,
     isLoading: statusLoading,
-    dataUpdatedAt: statusUpdatedAt,
   } = useQuery({
     queryKey: ["live-status"],
     queryFn: getLiveStatus,
@@ -147,7 +166,6 @@ export default function LiveMarket() {
   const {
     data: quotesPayload,
     isLoading: quotesLoading,
-    dataUpdatedAt: quotesUpdatedAt,
   } = useQuery({
     queryKey: ["live-quotes"],
     queryFn: getLiveQuotes,
@@ -166,18 +184,29 @@ export default function LiveMarket() {
   const exchange = quotesPayload?.exchange ?? status?.exchange ?? null;
   const indices = indicesPayload?.items ?? [];
   const closeLabel = status?.closeSaveLabel ?? "15:05 Asia/Qatar";
-  const refreshedAt = Math.max(statusUpdatedAt || 0, quotesUpdatedAt || 0);
+  // Age of the upstream feed, not of our own polling — a browser refresh every
+  // 500ms must never make a frozen feed look current.
+  const feedAge = status?.feedAgeSeconds ?? null;
+  const feedStale = Boolean(status?.stale) && items.length > 0;
+  const feedTimeLabel = status?.lastMessageAt
+    ? new Date(status.lastMessageAt).toLocaleTimeString()
+    : t("live.feedAge.never");
 
   useEffect(() => {
     const next: Record<string, number> = {};
     let any = false;
+    const until = Date.now() + FLASH_MS;
     for (const row of items) {
-      const prev = prevPrices.current.get(row.symbol);
-      if (prev != null && prev !== row.lastTradePrice) {
-        next[row.symbol] = Date.now() + FLASH_MS;
-        any = true;
+      const prev = prevRows.current.get(row.symbol);
+      if (prev) {
+        for (const field of FLASH_FIELDS) {
+          if (prev[field] !== row[field]) {
+            next[flashKey(row.symbol, field)] = until;
+            any = true;
+          }
+        }
       }
-      prevPrices.current.set(row.symbol, row.lastTradePrice);
+      prevRows.current.set(row.symbol, row);
     }
     if (any) setFlashUntil((cur) => ({ ...cur, ...next }));
   }, [items]);
@@ -292,21 +321,45 @@ export default function LiveMarket() {
             >
               {t("live.closeSave.at", { time: closeLabel })}
             </span>
-            {refreshedAt > 0 ? (
-              <span className="rounded-md border border-border/70 px-2 py-1 font-mono text-[10px] tracking-wider text-muted-foreground">
-                {t("live.lastRefresh")}: {new Date(refreshedAt).toLocaleTimeString()}
-              </span>
-            ) : null}
+            <span
+              className={cn(
+                "rounded-md border px-2 py-1 font-mono text-[10px] tracking-wider",
+                feedStale
+                  ? "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+                  : "border-border/70 text-muted-foreground",
+              )}
+              title={t("live.feedAge.label")}
+            >
+              {t("live.feedAge.label")}: {feedTimeLabel}
+              {feedAge != null ? ` · ${t("live.feedAge.seconds", { count: feedAge })}` : ""}
+              {feedStale ? ` · ${t("live.feedAge.staleBadge")}` : ""}
+            </span>
           </>
         )}
       />
 
-      {!status?.connected && status?.feedSource === "sample" && hasFeed ? (
+      {feedStale ? (
+        <div
+          className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2.5 text-[12px] leading-snug text-rose-950 dark:text-rose-100"
+          role="alert"
+        >
+          {t("live.staleNote", { seconds: feedAge ?? 0, time: feedTimeLabel })}
+        </div>
+      ) : null}
+      {status?.syntheticTicks ? (
+        <div
+          className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2.5 text-[12px] leading-snug text-rose-950 dark:text-rose-100"
+          role="alert"
+        >
+          {t("live.syntheticNote")}
+        </div>
+      ) : null}
+      {hasFeed && !feedStale && status?.feedSource && status.feedSource !== "hub" ? (
         <div
           className="mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 text-[12px] leading-snug text-amber-950 dark:text-amber-100"
           role="status"
         >
-          {t("live.sampleNote")}
+          {t("live.untrustedNote", { source: status.feedSource })}
         </div>
       ) : null}
       {/* {status?.feedSource === "qse_public" ? (
@@ -486,7 +539,8 @@ export default function LiveMarket() {
                   />
                 ) : (
                       paging.paged.map((row) => {
-                    const flashing = (flashUntil[row.symbol] ?? 0) > now;
+                    const flash = (field: FlashField) =>
+                      (flashUntil[flashKey(row.symbol, field)] ?? 0) > now ? FLASH_CELL : undefined;
                     const name = displayName(row, ar);
                     const dir = moveFromLastClose(row.lastTradePrice, row.closePrice);
                     const lastTone = lastPriceTone(dir);
@@ -524,40 +578,40 @@ export default function LiveMarket() {
                         <TableCell className="max-w-[160px] truncate py-1.5 text-[11px] text-muted-foreground" title={name}>
                           {name}
                         </TableCell>
-                        <TableCell className="py-1.5 text-end font-data text-[12px] tabular-nums font-medium">
+                        <TableCell className={cn("py-1.5 text-end font-data text-[12px] tabular-nums font-medium", flash("closePrice"))}>
                           {fmtPx(row.closePrice)}
                         </TableCell>
-                        <TableCell data-mw-tone="offer" className={cn("py-1.5 text-end font-data text-[11px] tabular-nums font-medium", OFFER_CELL)}>
+                        <TableCell data-mw-tone="offer" className={cn("py-1.5 text-end font-data text-[11px] tabular-nums font-medium", OFFER_CELL, flash("offerVolume"))}>
                           {fmtInt(row.offerVolume)}
                         </TableCell>
-                        <TableCell data-mw-tone="offer" className={cn("py-1.5 text-end font-data text-[12px] tabular-nums font-bold", OFFER_CELL)}>
+                        <TableCell data-mw-tone="offer" className={cn("py-1.5 text-end font-data text-[12px] tabular-nums font-bold", OFFER_CELL, flash("offerPrice"))}>
                           {fmtPx(row.offerPrice)}
                         </TableCell>
                         <TableCell
                           data-mw-tone="last"
-                          className={cn("py-1.5 text-end font-data text-[13px] tabular-nums", lastTone, flashing && FLASH_LAST)}
+                          className={cn("py-1.5 text-end font-data text-[13px] tabular-nums", lastTone, flash("lastTradePrice"))}
                         >
                           {fmtPx(row.lastTradePrice)}
                         </TableCell>
-                        <TableCell data-mw-tone="bid" className={cn("py-1.5 text-end font-data text-[12px] tabular-nums font-bold", BID_CELL)}>
+                        <TableCell data-mw-tone="bid" className={cn("py-1.5 text-end font-data text-[12px] tabular-nums font-bold", BID_CELL, flash("bidPrice"))}>
                           {fmtPx(row.bidPrice)}
                         </TableCell>
-                        <TableCell data-mw-tone="bid" className={cn("py-1.5 text-end font-data text-[11px] tabular-nums font-medium", BID_CELL)}>
+                        <TableCell data-mw-tone="bid" className={cn("py-1.5 text-end font-data text-[11px] tabular-nums font-medium", BID_CELL, flash("bidVolume"))}>
                           {fmtInt(row.bidVolume)}
                         </TableCell>
-                        <TableCell className="py-1.5 text-end font-data text-[11px] tabular-nums font-medium">
+                        <TableCell className={cn("py-1.5 text-end font-data text-[11px] tabular-nums font-medium", flash("trades"))}>
                           {fmtInt(row.trades)}
                         </TableCell>
-                        <TableCell className="py-1.5 text-end font-data text-[11px] tabular-nums font-medium">
+                        <TableCell className={cn("py-1.5 text-end font-data text-[11px] tabular-nums font-medium", flash("totalVolume"))}>
                           {fmtInt(row.totalVolume)}
                         </TableCell>
-                        <TableCell className="py-1.5 text-end font-data text-[11px] tabular-nums font-medium">
+                        <TableCell className={cn("py-1.5 text-end font-data text-[11px] tabular-nums font-medium", flash("totalValue"))}>
                           {fmtInt(row.totalValue)}
                         </TableCell>
-                        <TableCell data-mw-tone="chg" className={cn("py-1.5 text-end font-data text-[12px] tabular-nums", chgTone)}>
+                        <TableCell data-mw-tone="chg" className={cn("py-1.5 text-end font-data text-[12px] tabular-nums", chgTone, flash("netChange"))}>
                           {fmtPx(changeVal)}
                         </TableCell>
-                        <TableCell data-mw-tone="chg" className={cn("pe-3 py-1.5 text-end font-data text-[12px] tabular-nums", chgTone)}>
+                        <TableCell data-mw-tone="chg" className={cn("pe-3 py-1.5 text-end font-data text-[12px] tabular-nums", chgTone, flash("netChangePerc"))}>
                           {changePct == null ? "—" : `${fmtPx(changePct, 2)}%`}
                         </TableCell>
                       </TableRow>

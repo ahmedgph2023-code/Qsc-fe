@@ -1,4 +1,8 @@
 {
+  "charts": {
+    "other": "Other",
+    "empty": "Nothing to chart yet"
+  },
   "common": {
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -1594,10 +1598,21 @@
     },
     "valuationNote": "Intraday ticks are not written to stock_prices. At {{time}} the job saves Last Price as that day's official close (س-25). Depth and trade tape are received in the feed but deferred for a later phase.",
     "reason": {
-      "NO_BROADCAST_WS_URL": "No Hub URL yet. The server may still load the meeting sample on startup; set BROADCAST_WS_URL for the live feed.",
+      "NO_BROADCAST_WS_URL": "No Hub URL configured. The board stays empty on purpose — the system will not show a different source or simulated prices as if they were the firm's market data. Set BROADCAST_WS_URL to the QSC broadcast feed.",
       "NO_JSON_SAMPLE": "Waiting for JSON sample (meeting_3 BroadcastData.json is now available).",
-      "IDLE": "Feed idle outside session hours or waiting for messages."
-    }
+      "IDLE": "Feed idle outside session hours or waiting for messages.",
+      "STALE_FEED": "The feed stopped delivering data. The numbers below are frozen at the time shown and are not current.",
+      "UNTRUSTED_FEED": "These prices are not from the QSC Hub, so they are shown for reference only and are excluded from portfolio valuation."
+    },
+    "feedAge": {
+      "label": "Feed updated",
+      "seconds": "{{count}}s ago",
+      "never": "never",
+      "staleBadge": "Feed frozen"
+    },
+    "staleNote": "The live feed has not delivered data for {{seconds}}s (last update {{time}}). Prices on screen are frozen and portfolio valuation has fallen back to official close.",
+    "untrustedNote": "Source is not the QSC Hub ({{source}}). Numbers can differ from the firm's Market Watch — especially Trades — so they are reference only and never used for portfolio valuation or official closes.",
+    "syntheticNote": "QA simulation is active: some Last Prices on this screen were generated for testing. They are blocked from portfolio valuation and from the official-close job. Restart the backend to clear."
   },
   "productDecisions": {
     "title": "Product workshop",
@@ -2716,26 +2731,32 @@
     "description": "Buy/Sell invoices (OI/OC) from ShareTransactions for a date range.",
     "allClients": "All clients",
     "allTickers": "All stocks",
+    "allInvoices": "All invoices",
+    "searchInvoice": "Search invoice number",
+    "noInvoiceMatch": "No invoice matches",
+    "orderType": {
+      "all": "All order types",
+      "buy": "Buy",
+      "sell": "Sell"
+    },
     "excel": "Export Excel",
-    "exportFailed": "Excel export failed",
+    "pdf": "Export PDF",
+    "exportFailed": "Export failed",
     "emptyTitle": "No invoices",
     "emptyDesc": "No OI/OC share invoices in this range for the selected filters.",
     "errorTitle": "Could not load invoices",
     "errorDesc": "Check external SQL connectivity and try again.",
     "totals": "Totals",
     "col": {
-      "invSequence": "Inv sequence",
+      "invSequence": "Invoice sequence",
+      "invNo": "Invoice number",
       "orderSide": "Order side",
-      "accountId": "Account ID",
       "nin": "NIN",
       "accountName": "Account name",
-      "accountType": "Account type",
       "ticker": "Ticker",
       "company": "Company",
       "tradeDate": "Trade date",
       "qty": "Qty",
-      "buyQty": "Buy qty",
-      "sellQty": "Sell qty",
       "priceAvg": "Price avg.",
       "amount": "Amount",
       "totalComm": "Total comm.",
@@ -2752,9 +2773,19 @@
     "errorTitle": "Could not load portfolio",
     "errorDesc": "Check external SQL connectivity and try again.",
     "totals": "Totals",
+    "livePriceNote": "Price follows the latest market price while viewing today.",
+    "excel": "Export Excel",
+    "pdf": "Export PDF",
+    "exportFailed": "Export failed",
+    "chart": {
+      "stocks": "Stock distribution (share of market value)",
+      "sectors": "Sector distribution (share of market value)",
+      "holders": "Holders distribution (share of this stock)"
+    },
     "col": {
       "ticker": "Stock",
       "company": "Company",
+      "sector": "Sector",
       "clientCount": "Clients",
       "clientId": "Client",
       "clientName": "Client name",
@@ -2763,9 +2794,105 @@
       "costPrice": "Cost price",
       "marketPrice": "Market price",
       "marketValue": "Market value",
+      "stockPct": "Stock %",
+      "sectorPct": "Sector %",
+      "holderPct": "Share of stock %",
       "unrealized": "Unrealized P/L",
       "returnPct": "Return %",
       "realized": "Realized P/L"
+    }
+  },
+  "ordersBoard": {
+    "title": "Orders board",
+    "description": "Read-only Investment Manager board: today's executions, client cash, the live order book and every current order.",
+    "asOfNote": "The date applies to Daily Executions and Available Balances. The order book is always live.",
+    "col": {
+      "client": "Client",
+      "nin": "NIN",
+      "stock": "Stock",
+      "totalTraded": "Total buy and sell",
+      "avgSellPrice": "Avg sell price",
+      "sellValue": "Sell value",
+      "sellQty": "Sell qty",
+      "avgBuyPrice": "Avg buy price",
+      "buyValue": "Buy value",
+      "buyQty": "Buy qty",
+      "availableBalance": "Available balance",
+      "logo": "Logo",
+      "symbol": "Symbol",
+      "tickerName": "Ticker name",
+      "side": "Sell / Buy",
+      "qty": "Qty",
+      "exeQty": "Exe qty",
+      "remain": "Remain",
+      "visible": "Visible",
+      "price": "Price",
+      "validity": "Validity",
+      "status": "Status",
+      "orderNo": "Order no",
+      "clientName": "Client name"
+    },
+    "side": {
+      "buy": "BUY",
+      "sell": "SELL"
+    },
+    "executions": {
+      "title": "Daily Executions",
+      "subtitle": "Daily Executions",
+      "view": {
+        "client_stock": "By client and stock",
+        "stock": "By stock",
+        "client": "By client"
+      },
+      "clientTotal": "Total {{name}}",
+      "grandTotal": "Grand total",
+      "emptyTitle": "No executions",
+      "emptyDesc": "Nothing was executed for investment clients on this date.",
+      "errorTitle": "Could not load executions"
+    },
+    "balances": {
+      "title": "Available Balances",
+      "subtitle": "Available Balances",
+      "basisNote": "Cash ledger balance as of the selected date. Whether open buy orders are netted off is awaiting client confirmation.",
+      "emptyTitle": "No clients on the board",
+      "emptyDesc": "No client has a live order or an execution on this date.",
+      "errorTitle": "Could not load balances"
+    },
+    "pending": {
+      "title": "Pending Orders",
+      "subtitle": "Pending Orders",
+      "buyCount": "{{count}} buy",
+      "sellCount": "{{count}} sell",
+      "emptyTitle": "No pending orders",
+      "emptyDesc": "Nothing is waiting in the market right now.",
+      "errorTitle": "Could not load pending orders"
+    },
+    "detailed": {
+      "title": "Current Orders",
+      "subtitle": "Current Orders",
+      "count": "{{filtered}} of {{total}}"
+    },
+    "filters": {
+      "type": "Type",
+      "symbol": "Symbol",
+      "status": "Order status",
+      "validity": "Validity",
+      "orderNo": "Order number",
+      "orderNoPlaceholder": "Order no…",
+      "client": "Client",
+      "clientPlaceholder": "Client id",
+      "search": "Search",
+      "searchPlaceholder": "Name, NIN, stock…",
+      "clear": "Clear filters",
+      "allStocks": "All stocks",
+      "allStatuses": "All statuses",
+      "allValidities": "All validities",
+      "datedValidity": "GTC",
+      "side": {
+        "all": "All",
+        "buy": "Buy",
+        "sell": "Sell"
+      }
     }
   },
   "investmentOrders": {
